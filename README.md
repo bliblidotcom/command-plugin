@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/bliblidotcom/command-plugin.svg?branch=master)](https://travis-ci.org/bliblidotcom/command-plugin)
+
 Spring Boot Command Plugin
 --------------------------
 
@@ -7,7 +9,7 @@ Add this dependency in your ```pom.xml```
 <dependencies>
   ...
   <dependency>
-   <groupId>com.gdn.spring.boot.plugin</groupId>
+   <groupId>com.blibli.oss</groupId>
    <artifactId>command-plugin</artifactId>
    <version>...</version>
  </dependency>
