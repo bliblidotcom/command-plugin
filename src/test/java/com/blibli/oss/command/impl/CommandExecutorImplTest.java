@@ -23,7 +23,9 @@ import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 
 import static org.junit.Assert.*;
+import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.anyObject;
+import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.when;
 
 /**
@@ -193,6 +195,25 @@ public class CommandExecutorImplTest {
     ).toBlocking().value();
 
     fail("It should be failed");
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testError() {
+    when(dataCommand.execute(request))
+        .thenReturn(Single.error(new NullPointerException()));
+
+    commandExecutor.execute(DataCommand.class, request).toBlocking().value();
+  }
+
+  @Test
+  public void testErrorWithFallback() {
+    when(dataCommand.execute(request))
+        .thenReturn(Single.error(new NullPointerException()));
+    when(dataCommand.fallback(any(NullPointerException.class), eq(request)))
+        .thenReturn(Single.just("Fallback"));
+
+    String value = commandExecutor.execute(DataCommand.class, request).toBlocking().value();
+    assertEquals("Fallback", value);
   }
 
   @Data
