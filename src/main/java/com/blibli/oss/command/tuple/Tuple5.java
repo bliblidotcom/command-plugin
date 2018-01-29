@@ -1,8 +1,17 @@
 package com.blibli.oss.command.tuple;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 /**
  * @author Eko Kurniawan Khannedy
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Tuple5<FIRST, SECOND, THIRD, FORTH, FIFTH> {
 
   private FIRST first;
@@ -14,32 +23,4 @@ public class Tuple5<FIRST, SECOND, THIRD, FORTH, FIFTH> {
   private FORTH forth;
 
   private FIFTH fifth;
-
-  public Tuple5(FIRST first, SECOND second, THIRD third, FORTH forth, FIFTH fifth) {
-    this.first = first;
-    this.second = second;
-    this.third = third;
-    this.forth = forth;
-    this.fifth = fifth;
-  }
-
-  public FIRST getFirst() {
-    return first;
-  }
-
-  public SECOND getSecond() {
-    return second;
-  }
-
-  public THIRD getThird() {
-    return third;
-  }
-
-  public FORTH getForth() {
-    return forth;
-  }
-
-  public FIFTH getFifth() {
-    return fifth;
-  }
 }
