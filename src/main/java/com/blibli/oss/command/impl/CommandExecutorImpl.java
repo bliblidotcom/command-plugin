@@ -39,9 +39,8 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
 
   @Override
   public <R, T> Single<T> execute(Class<? extends Command<R, T>> commandClass, R request) {
-    Command<R, T> command = applicationContext.getBean(commandClass);
     return validateRequest(request)
-        .flatMap(command::execute);
+        .flatMap(validRequest -> doExecute(commandClass, validRequest));
   }
 
   @Override
@@ -55,8 +54,8 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
-            execute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            execute(commandBuilder2.getCommandClass(), tuple.getSecond()),
+            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
+            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
             Tuple2::new
         )
     );
@@ -75,9 +74,9 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
-            execute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            execute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            execute(commandBuilder3.getCommandClass(), tuple.getThird()),
+            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
+            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
+            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
             Tuple3::new
         )
     );
@@ -98,10 +97,10 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
-            execute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            execute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            execute(commandBuilder3.getCommandClass(), tuple.getThird()),
-            execute(commandBuilder4.getCommandClass(), tuple.getForth()),
+            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
+            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
+            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
+            doExecute(commandBuilder4.getCommandClass(), tuple.getForth()),
             Tuple4::new
         )
     );
@@ -124,11 +123,11 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
-            execute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            execute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            execute(commandBuilder3.getCommandClass(), tuple.getThird()),
-            execute(commandBuilder4.getCommandClass(), tuple.getForth()),
-            execute(commandBuilder5.getCommandClass(), tuple.getFifth()),
+            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
+            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
+            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
+            doExecute(commandBuilder4.getCommandClass(), tuple.getForth()),
+            doExecute(commandBuilder5.getCommandClass(), tuple.getFifth()),
             Tuple5::new
         )
     );
@@ -151,5 +150,11 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
     if (!constraintViolations.isEmpty()) {
       throw new ValidationException(constraintViolations);
     }
+  }
+
+  private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
+    Command<R, T> command = applicationContext.getBean(commandClass);
+    return command.execute(request)
+        .onErrorResumeNext(throwable -> command.fallback(throwable, request));
   }
 }
