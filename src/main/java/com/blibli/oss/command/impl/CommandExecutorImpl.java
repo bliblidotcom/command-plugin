@@ -3,7 +3,11 @@ package com.blibli.oss.command.impl;
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
+import com.blibli.oss.command.cache.CacheUtil;
+import com.blibli.oss.command.cache.CommandCache;
+import com.blibli.oss.command.cache.CommandCacheMapper;
 import com.blibli.oss.command.hystrix.CommandHystrix;
+import com.blibli.oss.command.hystrix.CommandHystrixCacheSupport;
 import com.blibli.oss.command.plugin.CommandGroupStrategy;
 import com.blibli.oss.command.plugin.CommandKeyStrategy;
 import com.blibli.oss.command.properties.CommandProperties;
@@ -33,14 +37,22 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
 
   private ApplicationContext applicationContext;
 
+  private CommandCache commandCache;
+
+  private CommandCacheMapper commandCacheMapper;
+
   public CommandExecutorImpl(Validator validator,
                              CommandKeyStrategy commandKeyStrategy,
                              CommandGroupStrategy commandGroupStrategy,
-                             CommandProperties commandProperties) {
+                             CommandProperties commandProperties,
+                             CommandCache commandCache,
+                             CommandCacheMapper commandCacheMapper) {
     this.validator = validator;
     this.commandKeyStrategy = commandKeyStrategy;
     this.commandGroupStrategy = commandGroupStrategy;
     this.commandProperties = commandProperties;
+    this.commandCache = commandCache;
+    this.commandCacheMapper = commandCacheMapper;
   }
 
   @Override
@@ -169,24 +181,64 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
   }
 
   private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
-    if (commandProperties.getHystrix().isEnabled()) {
-      return doExecuteWithHystrix(commandClass, request);
+    Command<R, T> command = applicationContext.getBean(commandClass);
+    T response = getResponseFromCache(command, request);
+    if (response == null) {
+      return doExecuteCommand(commandClass, request, command);
     } else {
-      return doExecuteWithoutHystrix(commandClass, request);
+      return Single.just(response);
     }
   }
 
-  private <R, T> Single<T> doExecuteWithoutHystrix(Class<? extends Command<R, T>> commandClass, R request) {
-    Command<R, T> command = applicationContext.getBean(commandClass);
+  private <R, T> T getResponseFromCache(Command<R, T> command, R request) {
+    if (!commandProperties.getCache().isEnabled()) {
+      return null;
+    }
+
+    String cacheKey = command.cacheKey(request);
+    if (cacheKey == null) {
+      return null;
+    }
+
+    String result = commandCache.get(cacheKey);
+    if (result == null) {
+      return null;
+    }
+
+    Class<T> responseClass = command.responseClass();
+    return commandCacheMapper.fromString(result, responseClass);
+  }
+
+  private <R, T> Single<T> doExecuteCommand(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
+    if (commandProperties.getHystrix().isEnabled()) {
+      return doExecuteWithHystrix(commandClass, request, command);
+    } else {
+      return doExecuteWithoutHystrix(commandClass, request, command);
+    }
+  }
+
+  private <R, T> Single<T> doExecuteWithoutHystrix(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
     return command.execute(request)
+        .doOnSuccess(response -> {
+          CacheUtil.evictCommandResponse(commandCache, command, request);
+          CacheUtil.cacheCommandResponse(commandCache, commandCacheMapper, command, request, response);
+        })
         .onErrorResumeNext(throwable -> command.fallback(throwable, request));
   }
 
-  private <R, T> Single<T> doExecuteWithHystrix(Class<? extends Command<R, T>> commandClass, R request) {
-    Command<R, T> command = applicationContext.getBean(commandClass);
+  private <R, T> Single<T> doExecuteWithHystrix(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
     String commandKey = commandKeyStrategy.getCommandKey(command);
     String commandGroup = commandGroupStrategy.getCommandGroup(command);
 
-    return new CommandHystrix<>(command, request, commandKey, commandGroup).toObservable().toSingle();
+    if (commandProperties.getCache().isEnabled()) {
+      return new CommandHystrixCacheSupport<>(
+          command, request, commandKey,
+          commandGroup, commandCache, commandCacheMapper
+      ).toObservable().toSingle();
+    } else {
+      return new CommandHystrix<>(
+          command, request, commandKey, commandGroup
+      ).toObservable().toSingle();
+    }
   }
 }

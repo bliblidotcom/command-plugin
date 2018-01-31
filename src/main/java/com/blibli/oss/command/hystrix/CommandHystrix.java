@@ -1,6 +1,7 @@
 package com.blibli.oss.command.hystrix;
 
 import com.blibli.oss.command.Command;
+import com.blibli.oss.command.cache.CommandCache;
 import com.netflix.hystrix.HystrixCommandGroupKey;
 import com.netflix.hystrix.HystrixCommandKey;
 import com.netflix.hystrix.HystrixObservableCommand;
@@ -12,9 +13,9 @@ import rx.Observable;
  */
 public class CommandHystrix<R, T> extends HystrixObservableCommand<T> {
 
-  private Command<R, T> command;
+  protected Command<R, T> command;
 
-  private R request;
+  protected R request;
 
   public CommandHystrix(Command<R, T> command, R request, String commandKey, String commandGroup) {
     super(Setter
