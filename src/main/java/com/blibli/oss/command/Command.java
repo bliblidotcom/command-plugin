@@ -27,4 +27,22 @@ public interface Command<R, T> {
     return Single.error(throwable);
   }
 
+  /**
+   * Get command key
+   *
+   * @return command key
+   */
+  default String key() {
+    return null;
+  }
+
+  /**
+   * Get group name
+   *
+   * @return group name
+   */
+  default String group() {
+    return null;
+  }
+
 }
