@@ -3,6 +3,10 @@ package com.blibli.oss.command.impl;
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
+import com.blibli.oss.command.hystrix.CommandHystrix;
+import com.blibli.oss.command.plugin.CommandGroupStrategy;
+import com.blibli.oss.command.plugin.CommandKeyStrategy;
+import com.blibli.oss.command.properties.CommandProperties;
 import com.blibli.oss.command.tuple.*;
 import com.blibli.oss.common.error.ValidationException;
 import org.springframework.beans.BeansException;
@@ -21,10 +25,22 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
 
   private Validator validator;
 
+  private CommandKeyStrategy commandKeyStrategy;
+
+  private CommandGroupStrategy commandGroupStrategy;
+
+  private CommandProperties commandProperties;
+
   private ApplicationContext applicationContext;
 
-  public CommandExecutorImpl(Validator validator) {
+  public CommandExecutorImpl(Validator validator,
+                             CommandKeyStrategy commandKeyStrategy,
+                             CommandGroupStrategy commandGroupStrategy,
+                             CommandProperties commandProperties) {
     this.validator = validator;
+    this.commandKeyStrategy = commandKeyStrategy;
+    this.commandGroupStrategy = commandGroupStrategy;
+    this.commandProperties = commandProperties;
   }
 
   @Override
@@ -153,8 +169,24 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
   }
 
   private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
+    if (commandProperties.getHystrix().isEnabled()) {
+      return doExecuteWithHystrix(commandClass, request);
+    } else {
+      return doExecuteWithoutHystrix(commandClass, request);
+    }
+  }
+
+  private <R, T> Single<T> doExecuteWithoutHystrix(Class<? extends Command<R, T>> commandClass, R request) {
     Command<R, T> command = applicationContext.getBean(commandClass);
     return command.execute(request)
         .onErrorResumeNext(throwable -> command.fallback(throwable, request));
+  }
+
+  private <R, T> Single<T> doExecuteWithHystrix(Class<? extends Command<R, T>> commandClass, R request) {
+    Command<R, T> command = applicationContext.getBean(commandClass);
+    String commandKey = commandKeyStrategy.getCommandKey(command);
+    String commandGroup = commandGroupStrategy.getCommandGroup(command);
+
+    return new CommandHystrix<>(command, request, commandKey, commandGroup).toObservable().toSingle();
   }
 }

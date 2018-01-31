@@ -1,11 +1,15 @@
 package com.blibli.oss.command.impl;
 
+import com.blibli.oss.command.plugin.impl.CommandGroupStrategyImpl;
+import com.blibli.oss.command.plugin.impl.CommandKeyStrategyImpl;
+import com.blibli.oss.command.properties.CommandProperties;
 import com.blibli.oss.common.error.ValidationException;
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.tuple.Tuple2;
 import com.blibli.oss.command.tuple.Tuple3;
 import com.blibli.oss.command.tuple.Tuple4;
 import com.blibli.oss.command.tuple.Tuple5;
+import com.netflix.hystrix.exception.HystrixRuntimeException;
 import lombok.Builder;
 import lombok.Data;
 import org.hibernate.validator.constraints.NotBlank;
@@ -44,6 +48,12 @@ public class CommandExecutorImplTest {
 
   private Validator validator;
 
+  private CommandGroupStrategyImpl commandGroupStrategy;
+
+  private CommandKeyStrategyImpl commandKeyStrategy;
+
+  private CommandProperties commandProperties;
+
   private CommandExecutorImpl commandExecutor;
 
   private DataCommandRequest request;
@@ -53,13 +63,25 @@ public class CommandExecutorImplTest {
     ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
     validator = factory.getValidator();
 
+    commandGroupStrategy = new CommandGroupStrategyImpl();
+
+    commandKeyStrategy = new CommandKeyStrategyImpl();
+    commandKeyStrategy.setApplicationContext(applicationContext);
+
     when(applicationContext.getBean(DataCommand.class))
         .thenReturn(dataCommand);
 
     when(dataCommand.execute(anyObject()))
         .thenReturn(Single.just("OK"));
 
-    commandExecutor = new CommandExecutorImpl(validator);
+    when(dataCommand.key()).thenReturn("dataKey");
+    when(dataCommand.group()).thenReturn("dataGroup");
+
+    commandProperties = new CommandProperties();
+    commandProperties.getHystrix().setEnabled(true);
+
+    commandExecutor = new CommandExecutorImpl(validator, commandKeyStrategy,
+        commandGroupStrategy, commandProperties);
     commandExecutor.setApplicationContext(applicationContext);
 
     request = DataCommandRequest.builder()
@@ -197,8 +219,22 @@ public class CommandExecutorImplTest {
     fail("It should be failed");
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testError() {
+    when(dataCommand.execute(request))
+        .thenReturn(Single.error(new NullPointerException()));
+
+    try {
+      commandExecutor.execute(DataCommand.class, request).toBlocking().value();
+      fail("It should fail");
+    } catch (HystrixRuntimeException e) {
+      assertTrue(e.getCause() instanceof NullPointerException);
+    }
+  }
+
+  @Test(expected = NullPointerException.class)
+  public void testErrorWithoutHystrix() {
+    commandProperties.getHystrix().setEnabled(false);
     when(dataCommand.execute(request))
         .thenReturn(Single.error(new NullPointerException()));
 
