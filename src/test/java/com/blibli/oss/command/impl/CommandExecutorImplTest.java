@@ -1,7 +1,9 @@
 package com.blibli.oss.command.impl;
 
 import com.blibli.oss.command.cache.CommandCache;
+import com.blibli.oss.command.cache.CommandCacheInterceptor;
 import com.blibli.oss.command.cache.CommandCacheMapper;
+import com.blibli.oss.command.plugin.CommandInterceptor;
 import com.blibli.oss.command.plugin.impl.CommandGroupStrategyImpl;
 import com.blibli.oss.command.plugin.impl.CommandKeyStrategyImpl;
 import com.blibli.oss.command.properties.CommandProperties;
@@ -28,6 +30,9 @@ import rx.Single;
 import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
+
+import java.util.Collections;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.mockito.Matchers.*;
@@ -69,15 +74,27 @@ public class CommandExecutorImplTest {
 
   private DataCommandImpl dataCommandImpl;
 
+  private CommandCacheInterceptor commandCacheInterceptor;
+
+  private CommandProcessorImpl commandProcessor;
+
+  private Map<String, CommandInterceptor> interceptorMap;
+
   @Before
   public void setUp() throws Exception {
     ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
     validator = factory.getValidator();
 
+    commandProperties = new CommandProperties();
+    commandProperties.getHystrix().setEnabled(true);
+
     commandGroupStrategy = new CommandGroupStrategyImpl();
 
     commandKeyStrategy = new CommandKeyStrategyImpl();
     commandKeyStrategy.setApplicationContext(applicationContext);
+
+    commandProcessor = new CommandProcessorImpl(commandProperties, commandKeyStrategy, commandGroupStrategy);
+    commandProcessor.setApplicationContext(applicationContext);
 
     when(applicationContext.getBean(DataCommand.class))
         .thenReturn(dataCommand);
@@ -92,16 +109,21 @@ public class CommandExecutorImplTest {
     when(dataCommand.key()).thenReturn("dataKey");
     when(dataCommand.group()).thenReturn("dataGroup");
 
-    commandProperties = new CommandProperties();
-    commandProperties.getHystrix().setEnabled(true);
+    commandCacheInterceptor = new CommandCacheInterceptor(commandProperties, commandCache, commandCacheMapper);
 
-    commandExecutor = new CommandExecutorImpl(validator, commandKeyStrategy,
-        commandGroupStrategy, commandProperties, commandCache, commandCacheMapper);
-    commandExecutor.setApplicationContext(applicationContext);
+    commandExecutor = new CommandExecutorImpl(validator, commandProcessor);
+
+    interceptorMap = Collections.singletonMap("commandCacheInterceptor", commandCacheInterceptor);
 
     request = DataCommandRequest.builder()
         .name("Name")
         .build();
+
+    when(applicationContext.getBeansOfType(CommandInterceptor.class)).thenReturn(interceptorMap);
+    when(applicationContext.getBean(DataCommand.class)).thenReturn(dataCommand);
+    when(applicationContext.getBean(DataCommandImpl.class)).thenReturn(dataCommandImpl);
+
+    commandProcessor.afterPropertiesSet();
   }
 
   @Test(expected = ValidationException.class)

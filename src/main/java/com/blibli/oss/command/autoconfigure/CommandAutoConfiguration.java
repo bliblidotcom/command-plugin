@@ -1,9 +1,11 @@
 package com.blibli.oss.command.autoconfigure;
 
 import com.blibli.oss.command.CommandExecutor;
+import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.cache.CommandCache;
 import com.blibli.oss.command.cache.CommandCacheMapper;
 import com.blibli.oss.command.impl.CommandExecutorImpl;
+import com.blibli.oss.command.impl.CommandProcessorImpl;
 import com.blibli.oss.command.plugin.CommandGroupStrategy;
 import com.blibli.oss.command.plugin.CommandKeyStrategy;
 import com.blibli.oss.command.plugin.impl.CommandGroupStrategyImpl;
@@ -30,26 +32,25 @@ public class CommandAutoConfiguration {
   @Bean
   @ConditionalOnClass({Validator.class})
   public CommandExecutor commandExecutor(@Autowired Validator validator,
-                                         @Autowired CommandKeyStrategy commandKeyStrategy,
-                                         @Autowired CommandGroupStrategy commandGroupStrategy,
-                                         @Autowired CommandProperties commandProperties,
-                                         @Autowired(required = false) CommandCacheMapper commandCacheMapper,
-                                         @Autowired(required = false) CommandCache commandCache) {
-    return new CommandExecutorImpl(
-        validator, commandKeyStrategy,
-        commandGroupStrategy, commandProperties,
-        commandCache, commandCacheMapper
-    );
+                                         @Autowired CommandProcessor commandProcessor) {
+    return new CommandExecutorImpl(validator, commandProcessor);
   }
 
   @Bean
-  @ConditionalOnMissingBean(CommandKeyStrategy.class)
+  public CommandProcessor commandProcessor(@Autowired CommandProperties commandProperties,
+                                           @Autowired CommandKeyStrategy commandKeyStrategy,
+                                           @Autowired CommandGroupStrategy commandGroupStrategy) {
+    return new CommandProcessorImpl(commandProperties, commandKeyStrategy, commandGroupStrategy);
+  }
+
+  @Bean
+  @ConditionalOnMissingBean
   public CommandKeyStrategy commandKeyStrategy() {
     return new CommandKeyStrategyImpl();
   }
 
   @Bean
-  @ConditionalOnMissingBean(CommandGroupStrategy.class)
+  @ConditionalOnMissingBean
   public CommandGroupStrategy commandGroupStrategy() {
     return new CommandGroupStrategyImpl();
   }

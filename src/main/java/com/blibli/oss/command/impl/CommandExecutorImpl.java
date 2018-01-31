@@ -3,19 +3,9 @@ package com.blibli.oss.command.impl;
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
-import com.blibli.oss.command.cache.CacheUtil;
-import com.blibli.oss.command.cache.CommandCache;
-import com.blibli.oss.command.cache.CommandCacheMapper;
-import com.blibli.oss.command.hystrix.CommandHystrix;
-import com.blibli.oss.command.hystrix.CommandHystrixCacheSupport;
-import com.blibli.oss.command.plugin.CommandGroupStrategy;
-import com.blibli.oss.command.plugin.CommandKeyStrategy;
-import com.blibli.oss.command.properties.CommandProperties;
+import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.tuple.*;
 import com.blibli.oss.common.error.ValidationException;
-import org.springframework.beans.BeansException;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.ApplicationContextAware;
 import rx.Single;
 
 import javax.validation.ConstraintViolation;
@@ -25,39 +15,15 @@ import java.util.Set;
 /**
  * @author Eko Kurniawan Khannedy
  */
-public class CommandExecutorImpl implements CommandExecutor, ApplicationContextAware {
+public class CommandExecutorImpl implements CommandExecutor {
 
   private Validator validator;
 
-  private CommandKeyStrategy commandKeyStrategy;
+  private CommandProcessor commandProcessor;
 
-  private CommandGroupStrategy commandGroupStrategy;
-
-  private CommandProperties commandProperties;
-
-  private ApplicationContext applicationContext;
-
-  private CommandCache commandCache;
-
-  private CommandCacheMapper commandCacheMapper;
-
-  public CommandExecutorImpl(Validator validator,
-                             CommandKeyStrategy commandKeyStrategy,
-                             CommandGroupStrategy commandGroupStrategy,
-                             CommandProperties commandProperties,
-                             CommandCache commandCache,
-                             CommandCacheMapper commandCacheMapper) {
+  public CommandExecutorImpl(Validator validator, CommandProcessor commandProcessor) {
     this.validator = validator;
-    this.commandKeyStrategy = commandKeyStrategy;
-    this.commandGroupStrategy = commandGroupStrategy;
-    this.commandProperties = commandProperties;
-    this.commandCache = commandCache;
-    this.commandCacheMapper = commandCacheMapper;
-  }
-
-  @Override
-  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
-    this.applicationContext = applicationContext;
+    this.commandProcessor = commandProcessor;
   }
 
   @Override
@@ -181,64 +147,6 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
   }
 
   private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
-    Command<R, T> command = applicationContext.getBean(commandClass);
-    T response = getResponseFromCache(command, request);
-    if (response == null) {
-      return doExecuteCommand(commandClass, request, command);
-    } else {
-      return Single.just(response);
-    }
-  }
-
-  private <R, T> T getResponseFromCache(Command<R, T> command, R request) {
-    if (!commandProperties.getCache().isEnabled()) {
-      return null;
-    }
-
-    String cacheKey = command.cacheKey(request);
-    if (cacheKey == null) {
-      return null;
-    }
-
-    String result = commandCache.get(cacheKey);
-    if (result == null) {
-      return null;
-    }
-
-    Class<T> responseClass = command.responseClass();
-    return commandCacheMapper.fromString(result, responseClass);
-  }
-
-  private <R, T> Single<T> doExecuteCommand(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
-    if (commandProperties.getHystrix().isEnabled()) {
-      return doExecuteWithHystrix(commandClass, request, command);
-    } else {
-      return doExecuteWithoutHystrix(commandClass, request, command);
-    }
-  }
-
-  private <R, T> Single<T> doExecuteWithoutHystrix(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
-    return command.execute(request)
-        .doOnSuccess(response -> {
-          CacheUtil.evictCommandResponse(commandCache, command, request);
-          CacheUtil.cacheCommandResponse(commandCache, commandCacheMapper, command, request, response);
-        })
-        .onErrorResumeNext(throwable -> command.fallback(throwable, request));
-  }
-
-  private <R, T> Single<T> doExecuteWithHystrix(Class<? extends Command<R, T>> commandClass, R request, Command<R, T> command) {
-    String commandKey = commandKeyStrategy.getCommandKey(command);
-    String commandGroup = commandGroupStrategy.getCommandGroup(command);
-
-    if (commandProperties.getCache().isEnabled()) {
-      return new CommandHystrixCacheSupport<>(
-          command, request, commandKey,
-          commandGroup, commandCache, commandCacheMapper
-      ).toObservable().toSingle();
-    } else {
-      return new CommandHystrix<>(
-          command, request, commandKey, commandGroup
-      ).toObservable().toSingle();
-    }
+    return commandProcessor.doExecute(commandClass, request);
   }
 }
