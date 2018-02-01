@@ -2,10 +2,7 @@ package com.blibli.oss.command.cache.impl;
 
 import com.blibli.oss.command.cache.CommandCacheMapper;
 import com.blibli.oss.command.exception.CommandRuntimeException;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.io.IOException;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -26,7 +23,7 @@ public class CommandCacheMapperImpl implements CommandCacheMapper {
 
     try {
       return objectMapper.writeValueAsString(object);
-    } catch (JsonProcessingException e) {
+    } catch (Throwable e) {
       throw new CommandRuntimeException(e);
     }
   }
@@ -40,7 +37,7 @@ public class CommandCacheMapperImpl implements CommandCacheMapper {
 
     try {
       return objectMapper.readValue(value, clazz);
-    } catch (IOException e) {
+    } catch (Throwable e) {
       throw new CommandRuntimeException(e);
     }
   }
