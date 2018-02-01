@@ -33,7 +33,7 @@ public interface CommandInterceptor {
    * @param <T>      response type
    */
   default <R, T> void afterSuccessExecute(Command<R, T> command, R request, T response) {
-
+    // DO NOTHING
   }
 
   /**
@@ -46,7 +46,7 @@ public interface CommandInterceptor {
    * @param <T>       response type
    */
   default <R, T> void afterFailedExecute(Command<R, T> command, R request, Throwable throwable) {
-
+    // DO NOTHING
   }
 
 }

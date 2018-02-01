@@ -1,7 +1,7 @@
 package com.blibli.oss.command.autoconfigure;
 
-import com.blibli.oss.command.cache.CommandCacheInterceptor;
 import com.blibli.oss.command.cache.CommandCache;
+import com.blibli.oss.command.cache.CommandCacheInterceptor;
 import com.blibli.oss.command.cache.CommandCacheMapper;
 import com.blibli.oss.command.cache.impl.CommandCacheImpl;
 import com.blibli.oss.command.cache.impl.CommandCacheMapperImpl;
@@ -9,7 +9,6 @@ import com.blibli.oss.command.properties.CommandProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;

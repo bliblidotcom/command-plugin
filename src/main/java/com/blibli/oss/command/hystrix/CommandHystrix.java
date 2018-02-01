@@ -1,7 +1,6 @@
 package com.blibli.oss.command.hystrix;
 
 import com.blibli.oss.command.Command;
-import com.blibli.oss.command.cache.CommandCache;
 import com.blibli.oss.command.plugin.CommandInterceptor;
 import com.blibli.oss.command.plugin.InterceptorUtil;
 import com.netflix.hystrix.HystrixCommandGroupKey;

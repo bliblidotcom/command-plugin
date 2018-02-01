@@ -78,52 +78,78 @@ public class CommandExecutorImplTest {
 
   private CommandProcessorImpl commandProcessor;
 
-  private Map<String, CommandInterceptor> interceptorMap;
-
   @Before
   public void setUp() throws Exception {
-    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-    validator = factory.getValidator();
+    setUpValidator();
+    setUpCommandProperties();
+    setUpCommandGroupStrategy();
+    setUpCommandKeyStrategy();
+    setUpCommandProcessor();
+    setUpDataCommandImpl();
+    setUpApplicationContext();
+    setUpDataCommand();
+    setUpCommandCacheInterceptor();
+    setUpCommandExecutor();
+    setUpRequest();
+    setUpApplicationContext();
+    commandProcessor.afterPropertiesSet();
+  }
 
-    commandProperties = new CommandProperties();
-    commandProperties.getHystrix().setEnabled(true);
-
-    commandGroupStrategy = new CommandGroupStrategyImpl();
-
-    commandKeyStrategy = new CommandKeyStrategyImpl();
-    commandKeyStrategy.setApplicationContext(applicationContext);
-
-    commandProcessor = new CommandProcessorImpl(commandProperties, commandKeyStrategy, commandGroupStrategy);
-    commandProcessor.setApplicationContext(applicationContext);
-
-    when(applicationContext.getBean(DataCommand.class))
-        .thenReturn(dataCommand);
-
-    dataCommandImpl = new DataCommandImpl();
-    when(applicationContext.getBean(DataCommandImpl.class))
-        .thenReturn(dataCommandImpl);
-
-    when(dataCommand.execute(anyObject()))
-        .thenReturn(Single.just("OK"));
-
-    when(dataCommand.key()).thenReturn("dataKey");
-    when(dataCommand.group()).thenReturn("dataGroup");
-
-    commandCacheInterceptor = new CommandCacheInterceptor(commandProperties, commandCache, commandCacheMapper);
-
-    commandExecutor = new CommandExecutorImpl(validator, commandProcessor);
-
-    interceptorMap = Collections.singletonMap("commandCacheInterceptor", commandCacheInterceptor);
-
+  private void setUpRequest() {
     request = DataCommandRequest.builder()
         .name("Name")
         .build();
+  }
 
+  private void setUpCommandExecutor() {
+    commandExecutor = new CommandExecutorImpl(validator, commandProcessor);
+  }
+
+  private void setUpDataCommand() {
+    when(dataCommand.execute(anyObject())).thenReturn(Single.just("OK"));
+    when(dataCommand.key()).thenReturn("dataKey");
+    when(dataCommand.group()).thenReturn("dataGroup");
+  }
+
+  private void setUpApplicationContext() {
+    when(applicationContext.getBean(DataCommand.class))
+        .thenReturn(dataCommand);
+    when(applicationContext.getBean(DataCommandImpl.class))
+        .thenReturn(dataCommandImpl);
+    Map<String, CommandInterceptor> interceptorMap = Collections.singletonMap("commandCacheInterceptor", commandCacheInterceptor);
     when(applicationContext.getBeansOfType(CommandInterceptor.class)).thenReturn(interceptorMap);
-    when(applicationContext.getBean(DataCommand.class)).thenReturn(dataCommand);
-    when(applicationContext.getBean(DataCommandImpl.class)).thenReturn(dataCommandImpl);
+  }
 
-    commandProcessor.afterPropertiesSet();
+  private void setUpDataCommandImpl() {
+    dataCommandImpl = new DataCommandImpl();
+  }
+
+  private void setUpCommandProcessor() {
+    commandProcessor = new CommandProcessorImpl(commandProperties, commandKeyStrategy, commandGroupStrategy);
+    commandProcessor.setApplicationContext(applicationContext);
+  }
+
+  private void setUpCommandKeyStrategy() {
+    commandKeyStrategy = new CommandKeyStrategyImpl();
+    commandKeyStrategy.setApplicationContext(applicationContext);
+  }
+
+  private void setUpCommandGroupStrategy() {
+    commandGroupStrategy = new CommandGroupStrategyImpl();
+  }
+
+  private void setUpValidator() {
+    ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+    validator = factory.getValidator();
+  }
+
+  private void setUpCommandProperties() {
+    commandProperties = new CommandProperties();
+    commandProperties.getHystrix().setEnabled(true);
+  }
+
+  private void setUpCommandCacheInterceptor() {
+    commandCacheInterceptor = new CommandCacheInterceptor(commandProperties, commandCache, commandCacheMapper);
   }
 
   @Test(expected = ValidationException.class)
