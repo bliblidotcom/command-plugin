@@ -17,6 +17,7 @@
 package com.blibli.oss.command.plugin;
 
 import com.blibli.oss.command.Command;
+import com.blibli.oss.command.exception.CommandRuntimeException;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -85,7 +86,7 @@ public class InterceptorUtilTest {
   }
 
   private void mockCommandInterceptorBeforeExecuteError() {
-    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenThrow(new NullPointerException());
+    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenThrow(new CommandRuntimeException());
   }
 
   @Test
@@ -111,7 +112,7 @@ public class InterceptorUtilTest {
 
   @Test
   public void testAfterSuccessExecuteError() {
-    doThrow(new NullPointerException()).when(commandInterceptor).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
+    doThrow(new CommandRuntimeException()).when(commandInterceptor).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
     InterceptorUtil.afterSuccessExecute(commandInterceptors, dataCommand, REQUEST, RESPONSE);
 
     verify(commandInterceptor, times(1)).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
@@ -126,7 +127,7 @@ public class InterceptorUtilTest {
 
   @Test
   public void testAfterFailedExecuteError() {
-    doThrow(new NullPointerException()).when(commandInterceptor).afterFailedExecute(dataCommand, REQUEST, throwable);
+    doThrow(new CommandRuntimeException()).when(commandInterceptor).afterFailedExecute(dataCommand, REQUEST, throwable);
     InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable);
 
     verify(commandInterceptor, times(1)).afterFailedExecute(dataCommand, REQUEST, throwable);

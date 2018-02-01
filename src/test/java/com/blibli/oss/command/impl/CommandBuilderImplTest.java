@@ -17,14 +17,9 @@
 package com.blibli.oss.command.impl;
 
 import com.blibli.oss.command.Command;
-import org.junit.Rule;
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnit;
-import org.mockito.junit.MockitoRule;
 
-import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author Eko Kurniawan Khannedy

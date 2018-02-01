@@ -23,9 +23,9 @@ import static org.mockito.Mockito.*;
  */
 public class CommandCacheMapperImplTest {
 
-  public static final String STRING = "STRING";
-  public static final String DATA = "DATA";
-  public static final String VALUE = "VALUE";
+  private static final String STRING = "STRING";
+  private static final String DATA = "DATA";
+  private static final String VALUE = "VALUE";
 
   @Rule
   public MockitoRule mockitoRule = MockitoJUnit.rule();
@@ -83,7 +83,7 @@ public class CommandCacheMapperImplTest {
   }
 
   private void mockObjectMapperWriteValueAsStringError() throws JsonProcessingException {
-    when(objectMapper.writeValueAsString(sampleData)).thenThrow(new NullPointerException());
+    when(objectMapper.writeValueAsString(sampleData)).thenThrow(new CommandRuntimeException());
   }
 
   @Test
@@ -111,7 +111,7 @@ public class CommandCacheMapperImplTest {
   }
 
   private void mockObjectMapperReadValueError() throws IOException {
-    when(objectMapper.readValue(VALUE, SampleData.class)).thenThrow(new NullPointerException());
+    when(objectMapper.readValue(VALUE, SampleData.class)).thenThrow(new CommandRuntimeException());
   }
 
   @Builder

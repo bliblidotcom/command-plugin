@@ -28,7 +28,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
-import rx.Single;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -42,7 +41,7 @@ public class CommandCacheInterceptorTest {
   private static final String DATA = "DATA";
   private static final String CACHE_VALUE = "CACHE_VALUE";
   private static final String MAPPER_VALUE = "MAPPER_VALUE";
-  public static final String RESPONSE = "RESPONSE";
+  private static final String RESPONSE = "RESPONSE";
 
   @Rule
   public MockitoRule mockitoRule = MockitoJUnit.rule();
