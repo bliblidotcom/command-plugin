@@ -23,6 +23,7 @@ import javax.validation.Validator;
  */
 @Configuration
 @AutoConfigureAfter({CommandPropertiesAutoConfiguration.class})
+@ConditionalOnClass({Validator.class})
 public class CommandAutoConfiguration {
 
   @Bean

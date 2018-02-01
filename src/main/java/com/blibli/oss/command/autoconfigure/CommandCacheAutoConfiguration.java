@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
  */
 @Configuration
 @AutoConfigureAfter({CommandPropertiesAutoConfiguration.class})
+@ConditionalOnClass({StringRedisTemplate.class, ObjectMapper.class})
 public class CommandCacheAutoConfiguration {
 
   @Bean

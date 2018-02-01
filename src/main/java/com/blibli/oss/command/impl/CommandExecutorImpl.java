@@ -6,6 +6,7 @@ import com.blibli.oss.command.CommandExecutor;
 import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.tuple.*;
 import com.blibli.oss.common.error.ValidationException;
+import lombok.extern.slf4j.Slf4j;
 import rx.Single;
 
 import javax.validation.ConstraintViolation;
@@ -15,6 +16,7 @@ import java.util.Set;
 /**
  * @author Eko Kurniawan Khannedy
  */
+@Slf4j
 public class CommandExecutorImpl implements CommandExecutor {
 
   private Validator validator;
@@ -130,6 +132,7 @@ public class CommandExecutorImpl implements CommandExecutor {
   private <R> Single<R> validateRequest(R request) {
     return Single.create(singleSubscriber -> {
       try {
+        log.info("Validate request {}", request.getClass().getName());
         validateAndThrownIfInvalid(request);
         singleSubscriber.onSuccess(request);
       } catch (Throwable throwable) {
