@@ -45,4 +45,33 @@ public interface Command<R, T> {
     return null;
   }
 
+  /**
+   * Get cache key, if <code>null</code> this command result will not be cached
+   *
+   * @param request command request
+   * @return cache key
+   */
+  default String cacheKey(R request) {
+    return null;
+  }
+
+  /**
+   * Get evict key, if <code>null</code> this command will not trigger evict in cache
+   *
+   * @param request command request
+   * @return evict key
+   */
+  default String evictKey(R request) {
+    return null;
+  }
+
+  /**
+   * Get return class for cache serialization
+   *
+   * @return response class
+   */
+  default Class<T> responseClass() {
+    throw new UnsupportedOperationException("No response class available.");
+  }
+
 }

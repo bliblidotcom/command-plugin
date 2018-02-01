@@ -1,2 +1,4 @@
 org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+com.blibli.oss.command.autoconfigure.CommandPropertiesAutoConfiguration,\
+com.blibli.oss.command.autoconfigure.CommandCacheAutoConfiguration,\
 com.blibli.oss.command.autoconfigure.CommandAutoConfiguration
