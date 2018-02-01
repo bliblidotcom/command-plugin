@@ -168,6 +168,9 @@ public class CommandCacheInterceptorTest {
   public void testAfterSuccessExecuteCacheDisabled() {
     setUpCachePropertiesDisabled();
     commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
+
+    verify(dataCommand, times(0)).cacheKey(dataCommandRequest);
+    verify(dataCommand, times(0)).evictKey(dataCommandRequest);
   }
 
   @Test
