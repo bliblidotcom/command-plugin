@@ -4,8 +4,8 @@ import com.blibli.oss.command.Command;
 import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
 import com.blibli.oss.command.CommandProcessor;
+import com.blibli.oss.command.exception.CommandValidationException;
 import com.blibli.oss.command.tuple.*;
-import com.blibli.oss.common.error.ValidationException;
 import lombok.extern.slf4j.Slf4j;
 import rx.Single;
 
@@ -142,10 +142,10 @@ public class CommandExecutorImpl implements CommandExecutor {
   }
 
   private <R> void validateAndThrownIfInvalid(R request)
-      throws ValidationException {
+      throws CommandValidationException {
     Set<ConstraintViolation<R>> constraintViolations = validator.validate(request);
     if (!constraintViolations.isEmpty()) {
-      throw new ValidationException(constraintViolations);
+      throw new CommandValidationException(constraintViolations);
     }
   }
 

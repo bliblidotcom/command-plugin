@@ -3,11 +3,11 @@ package com.blibli.oss.command.impl;
 import com.blibli.oss.command.cache.CommandCache;
 import com.blibli.oss.command.cache.CommandCacheInterceptor;
 import com.blibli.oss.command.cache.CommandCacheMapper;
+import com.blibli.oss.command.exception.CommandValidationException;
 import com.blibli.oss.command.plugin.CommandInterceptor;
 import com.blibli.oss.command.plugin.impl.CommandGroupStrategyImpl;
 import com.blibli.oss.command.plugin.impl.CommandKeyStrategyImpl;
 import com.blibli.oss.command.properties.CommandProperties;
-import com.blibli.oss.common.error.ValidationException;
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.tuple.Tuple2;
 import com.blibli.oss.command.tuple.Tuple3;
@@ -152,8 +152,8 @@ public class CommandExecutorImplTest {
     commandCacheInterceptor = new CommandCacheInterceptor(commandProperties, commandCache, commandCacheMapper);
   }
 
-  @Test(expected = ValidationException.class)
-  public void testValidationException() throws Exception {
+  @Test(expected = CommandValidationException.class)
+  public void testCommandValidationException() throws Exception {
     request.setName(""); // blank
     commandExecutor.execute(DataCommand.class, request).toBlocking().value();
   }
@@ -220,7 +220,7 @@ public class CommandExecutorImplTest {
     assertEquals("OK", value.getFifth());
   }
 
-  @Test(expected = ValidationException.class)
+  @Test(expected = CommandValidationException.class)
   public void testExecuteAll5Failed() {
     DataCommandRequest requestFailed = DataCommandRequest.builder()
         .name("")
@@ -237,7 +237,7 @@ public class CommandExecutorImplTest {
     fail("It should be failed");
   }
 
-  @Test(expected = ValidationException.class)
+  @Test(expected = CommandValidationException.class)
   public void testExecuteAll4Failed() {
     DataCommandRequest requestFailed = DataCommandRequest.builder()
         .name("")
@@ -253,7 +253,7 @@ public class CommandExecutorImplTest {
     fail("It should be failed");
   }
 
-  @Test(expected = ValidationException.class)
+  @Test(expected = CommandValidationException.class)
   public void testExecuteAll3Failed() {
     DataCommandRequest requestFailed = DataCommandRequest.builder()
         .name("")
@@ -268,7 +268,7 @@ public class CommandExecutorImplTest {
     fail("It should be failed");
   }
 
-  @Test(expected = ValidationException.class)
+  @Test(expected = CommandValidationException.class)
   public void testExecuteAll2Failed() {
     DataCommandRequest requestFailed = DataCommandRequest.builder()
         .name("")

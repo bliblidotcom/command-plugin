@@ -31,12 +31,6 @@
 
   <dependencies>
     <dependency>
-      <groupId>com.blibli.oss</groupId>
-      <artifactId>common-plugin</artifactId>
-      <version>0.0.1</version>
-      <scope>provided</scope>
-    </dependency>
-    <dependency>
       <groupId>io.reactivex</groupId>
       <artifactId>rxjava</artifactId>
       <version>1.1.10</version>
