@@ -14,18 +14,26 @@
  * limitations under the License.
  */
 
-package com.blibli.oss.command;
+package com.blibli.oss.command.executor;
 
-import com.blibli.oss.command.executor.MultiCommandExecutor;
-import com.blibli.oss.command.executor.MultiCommandSingleRequestExecutor;
-import com.blibli.oss.command.executor.SingleCommandExecutor;
+import com.blibli.oss.command.Command;
+import rx.Single;
 
 /**
+ * Executor for one command
+ *
  * @author Eko Kurniawan Khannedy
  */
-public interface CommandExecutor extends
-    SingleCommandExecutor,
-    MultiCommandExecutor,
-    MultiCommandSingleRequestExecutor {
+public interface SingleCommandExecutor {
 
+  /**
+   * Execute single command
+   *
+   * @param commandClass command class
+   * @param request      command request
+   * @param <R>          request type
+   * @param <T>          result type
+   * @return single of result
+   */
+  <R, T> Single<T> execute(Class<? extends Command<R, T>> commandClass, R request);
 }

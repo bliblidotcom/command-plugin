@@ -152,4 +152,72 @@ public class CommandExecutorImpl implements CommandExecutor {
   private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
     return commandProcessor.doExecute(commandClass, request);
   }
+
+  @Override
+  public <R, T1, T2> Single<Tuple2<T1, T2>> executeAll(
+      Class<? extends Command<R, T1>> command1,
+      Class<? extends Command<R, T2>> command2,
+      R request) {
+    return validateRequest(request).flatMap(validRequest ->
+        Single.zip(
+            doExecute(command1, request),
+            doExecute(command2, request),
+            Tuple::of
+        )
+    );
+  }
+
+  @Override
+  public <R, T1, T2, T3> Single<Tuple3<T1, T2, T3>> executeAll(
+      Class<? extends Command<R, T1>> command1,
+      Class<? extends Command<R, T2>> command2,
+      Class<? extends Command<R, T3>> command3,
+      R request) {
+    return validateRequest(request).flatMap(validRequest ->
+        Single.zip(
+            doExecute(command1, request),
+            doExecute(command2, request),
+            doExecute(command3, request),
+            Tuple::of
+        )
+    );
+  }
+
+  @Override
+  public <R, T1, T2, T3, T4> Single<Tuple4<T1, T2, T3, T4>> executeAll(
+      Class<? extends Command<R, T1>> command1,
+      Class<? extends Command<R, T2>> command2,
+      Class<? extends Command<R, T3>> command3,
+      Class<? extends Command<R, T4>> command4,
+      R request) {
+    return validateRequest(request).flatMap(validRequest ->
+        Single.zip(
+            doExecute(command1, request),
+            doExecute(command2, request),
+            doExecute(command3, request),
+            doExecute(command4, request),
+            Tuple::of
+        )
+    );
+  }
+
+  @Override
+  public <R, T1, T2, T3, T4, T5> Single<Tuple5<T1, T2, T3, T4, T5>> executeAll(
+      Class<? extends Command<R, T1>> command1,
+      Class<? extends Command<R, T2>> command2,
+      Class<? extends Command<R, T3>> command3,
+      Class<? extends Command<R, T4>> command4,
+      Class<? extends Command<R, T5>> command5,
+      R request) {
+    return validateRequest(request).flatMap(validRequest ->
+        Single.zip(
+            doExecute(command1, request),
+            doExecute(command2, request),
+            doExecute(command3, request),
+            doExecute(command4, request),
+            doExecute(command5, request),
+            Tuple::of
+        )
+    );
+  }
 }
