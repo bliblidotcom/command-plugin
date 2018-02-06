@@ -94,6 +94,7 @@ public class CommandExecutorImplTest {
     setUpRequest();
     setUpApplicationContext();
     commandProcessor.afterPropertiesSet();
+    commandExecutor.setApplicationContext(applicationContext);
   }
 
   private void setUpRequest() {
@@ -110,6 +111,7 @@ public class CommandExecutorImplTest {
     when(dataCommand.execute(anyObject())).thenReturn(Single.just("OK"));
     when(dataCommand.key()).thenReturn("dataKey");
     when(dataCommand.group()).thenReturn("dataGroup");
+    when(dataCommand.validateRequest()).thenReturn(true);
   }
 
   private void setUpApplicationContext() {
