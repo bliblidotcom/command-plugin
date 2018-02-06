@@ -31,6 +31,7 @@ import javax.validation.Validation;
 import javax.validation.Validator;
 import javax.validation.ValidatorFactory;
 
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Map;
 
@@ -431,8 +432,8 @@ public class CommandExecutorImplTest {
     }
 
     @Override
-    public String evictKey(DataCommandRequest request) {
-      return cacheKey;
+    public Collection<String> evictKeys(DataCommandRequest request) {
+      return Collections.singleton(cacheKey);
     }
   }
 

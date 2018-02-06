@@ -2,6 +2,8 @@ package com.blibli.oss.command;
 
 import rx.Single;
 
+import java.util.Collection;
+
 /**
  * @author Eko Kurniawan Khannedy
  */
@@ -56,12 +58,12 @@ public interface Command<R, T> {
   }
 
   /**
-   * Get evict key, if <code>null</code> this command will not trigger evict in cache
+   * Get evict keys, if <code>null</code> this command will not trigger evict in cache
    *
    * @param request command request
-   * @return evict key
+   * @return evict keys
    */
-  default String evictKey(R request) {
+  default Collection<String> evictKeys(R request) {
     return null;
   }
 

@@ -4,6 +4,8 @@ import com.blibli.oss.command.Command;
 import com.blibli.oss.command.plugin.CommandInterceptor;
 import com.blibli.oss.command.properties.CommandProperties;
 
+import java.util.Collection;
+
 /**
  * @author Eko Kurniawan Khannedy
  * @since 01/02/18
@@ -61,9 +63,11 @@ public class CommandCacheInterceptor implements CommandInterceptor {
   }
 
   private <R, T> void evictCommandResponse(Command<R, T> command, R request) {
-    String evictKey = command.evictKey(request);
-    if (evictKey != null) {
-      commandCache.evict(evictKey);
+    Collection<String> evictKeys = command.evictKeys(request);
+    if (evictKeys != null) {
+      for (String evictKey : evictKeys) {
+        commandCache.evict(evictKey);
+      }
     }
   }
 }

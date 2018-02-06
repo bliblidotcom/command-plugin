@@ -29,6 +29,9 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
+import java.util.Collection;
+import java.util.Collections;
+
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
@@ -170,7 +173,7 @@ public class CommandCacheInterceptorTest {
     commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
 
     verify(dataCommand, times(0)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(0)).evictKey(dataCommandRequest);
+    verify(dataCommand, times(0)).evictKeys(dataCommandRequest);
   }
 
   @Test
@@ -179,7 +182,7 @@ public class CommandCacheInterceptorTest {
     commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
 
     verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKey(dataCommandRequest);
+    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
   }
 
   @Test
@@ -190,7 +193,7 @@ public class CommandCacheInterceptorTest {
     commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
 
     verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKey(dataCommandRequest);
+    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
     verify(commandCacheMapper, times(1)).toString(RESPONSE);
     verify(commandCache, times(1)).cache(CACHE_KEY, MAPPER_VALUE);
   }
@@ -206,12 +209,12 @@ public class CommandCacheInterceptorTest {
     commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
 
     verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKey(dataCommandRequest);
+    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
     verify(commandCache, times(1)).evict(CACHE_KEY);
   }
 
   private void mockCommandEvictKey() {
-    when(dataCommand.evictKey(dataCommandRequest)).thenReturn(CACHE_KEY);
+    when(dataCommand.evictKeys(dataCommandRequest)).thenReturn(Collections.singleton(CACHE_KEY));
   }
 
   @Data
