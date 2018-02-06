@@ -76,4 +76,13 @@ public interface Command<R, T> {
     throw new UnsupportedOperationException("No response class available.");
   }
 
+  /**
+   * Is request need to be validated before execute command
+   *
+   * @return true if need, false if not need
+   */
+  default boolean validateRequest() {
+    return true;
+  }
+
 }

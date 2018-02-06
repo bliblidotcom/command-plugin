@@ -7,6 +7,9 @@ import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.exception.CommandValidationException;
 import com.blibli.oss.command.tuple.*;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeansException;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.ApplicationContextAware;
 import rx.Single;
 
 import javax.validation.ConstraintViolation;
@@ -17,15 +20,22 @@ import java.util.Set;
  * @author Eko Kurniawan Khannedy
  */
 @Slf4j
-public class CommandExecutorImpl implements CommandExecutor {
+public class CommandExecutorImpl implements CommandExecutor, ApplicationContextAware {
 
   private Validator validator;
 
   private CommandProcessor commandProcessor;
 
+  private ApplicationContext applicationContext;
+
   public CommandExecutorImpl(Validator validator, CommandProcessor commandProcessor) {
     this.validator = validator;
     this.commandProcessor = commandProcessor;
+  }
+
+  @Override
+  public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
+    this.applicationContext = applicationContext;
   }
 
   @Override
@@ -35,7 +45,7 @@ public class CommandExecutorImpl implements CommandExecutor {
 
   @Override
   public <R, T> Single<T> execute(Class<? extends Command<R, T>> commandClass, R request) {
-    return validateRequest(request)
+    return validateRequest(request, commandClass)
         .flatMap(validRequest -> doExecute(commandClass, validRequest));
   }
 
@@ -45,8 +55,8 @@ public class CommandExecutorImpl implements CommandExecutor {
       CommandBuilder<R2, T2> commandBuilder2
   ) {
     return Single.zip(
-        validateRequest(commandBuilder1.getRequest()),
-        validateRequest(commandBuilder2.getRequest()),
+        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
+        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
@@ -64,9 +74,9 @@ public class CommandExecutorImpl implements CommandExecutor {
       CommandBuilder<R3, T3> commandBuilder3
   ) {
     return Single.zip(
-        validateRequest(commandBuilder1.getRequest()),
-        validateRequest(commandBuilder2.getRequest()),
-        validateRequest(commandBuilder3.getRequest()),
+        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
+        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
+        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
@@ -86,10 +96,10 @@ public class CommandExecutorImpl implements CommandExecutor {
       CommandBuilder<R4, T4> commandBuilder4
   ) {
     return Single.zip(
-        validateRequest(commandBuilder1.getRequest()),
-        validateRequest(commandBuilder2.getRequest()),
-        validateRequest(commandBuilder3.getRequest()),
-        validateRequest(commandBuilder4.getRequest()),
+        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
+        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
+        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
+        validateRequest(commandBuilder4.getRequest(), commandBuilder4.getCommandClass()),
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
@@ -111,11 +121,11 @@ public class CommandExecutorImpl implements CommandExecutor {
       CommandBuilder<R5, T5> commandBuilder5
   ) {
     return Single.zip(
-        validateRequest(commandBuilder1.getRequest()),
-        validateRequest(commandBuilder2.getRequest()),
-        validateRequest(commandBuilder3.getRequest()),
-        validateRequest(commandBuilder4.getRequest()),
-        validateRequest(commandBuilder5.getRequest()),
+        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
+        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
+        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
+        validateRequest(commandBuilder4.getRequest(), commandBuilder4.getCommandClass()),
+        validateRequest(commandBuilder5.getRequest(), commandBuilder5.getCommandClass()),
         Tuple::of
     ).flatMap(tuple ->
         Single.zip(
@@ -129,16 +139,36 @@ public class CommandExecutorImpl implements CommandExecutor {
     );
   }
 
-  private <R> Single<R> validateRequest(R request) {
+  @SafeVarargs
+  private final <R> Single<R> validateRequest(R request, Class<? extends Command<?, ?>>... classes) {
     return Single.create(singleSubscriber -> {
       try {
-        log.info("Validate request {}", request.getClass().getName());
-        validateAndThrownIfInvalid(request);
+        if (isValidateRequest(classes)) {
+          log.info("Validate request {}", request.getClass().getName());
+          validateAndThrownIfInvalid(request);
+        }
+
         singleSubscriber.onSuccess(request);
       } catch (Throwable throwable) {
         singleSubscriber.onError(throwable);
       }
     });
+  }
+
+  @SafeVarargs
+  private final boolean isValidateRequest(Class<? extends Command<?, ?>>... classes) {
+    if (classes == null) {
+      return false;
+    }
+
+    for (Class<? extends Command> clazz : classes) {
+      Command command = applicationContext.getBean(clazz);
+      if (command.validateRequest()) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   private <R> void validateAndThrownIfInvalid(R request)
@@ -158,7 +188,7 @@ public class CommandExecutorImpl implements CommandExecutor {
       Class<? extends Command<R, T1>> command1,
       Class<? extends Command<R, T2>> command2,
       R request) {
-    return validateRequest(request).flatMap(validRequest ->
+    return validateRequest(request, command1, command2).flatMap(validRequest ->
         Single.zip(
             doExecute(command1, request),
             doExecute(command2, request),
@@ -173,7 +203,7 @@ public class CommandExecutorImpl implements CommandExecutor {
       Class<? extends Command<R, T2>> command2,
       Class<? extends Command<R, T3>> command3,
       R request) {
-    return validateRequest(request).flatMap(validRequest ->
+    return validateRequest(request, command1, command2, command3).flatMap(validRequest ->
         Single.zip(
             doExecute(command1, request),
             doExecute(command2, request),
@@ -190,7 +220,7 @@ public class CommandExecutorImpl implements CommandExecutor {
       Class<? extends Command<R, T3>> command3,
       Class<? extends Command<R, T4>> command4,
       R request) {
-    return validateRequest(request).flatMap(validRequest ->
+    return validateRequest(request, command1, command2, command3, command4).flatMap(validRequest ->
         Single.zip(
             doExecute(command1, request),
             doExecute(command2, request),
@@ -209,7 +239,7 @@ public class CommandExecutorImpl implements CommandExecutor {
       Class<? extends Command<R, T4>> command4,
       Class<? extends Command<R, T5>> command5,
       R request) {
-    return validateRequest(request).flatMap(validRequest ->
+    return validateRequest(request, command1, command2, command3, command4, command5).flatMap(validRequest ->
         Single.zip(
             doExecute(command1, request),
             doExecute(command2, request),
