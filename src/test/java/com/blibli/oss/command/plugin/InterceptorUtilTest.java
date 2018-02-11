@@ -25,9 +25,12 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import org.springframework.context.ApplicationContext;
 
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -53,6 +56,20 @@ public class InterceptorUtilTest {
 
   private Throwable throwable = new RuntimeException();
 
+  @Mock
+  private ApplicationContext applicationContext;
+
+  @Mock
+  private CommandInterceptor commandInterceptor1;
+
+  @Mock
+  private CommandInterceptor commandInterceptor2;
+
+  @Mock
+  private CommandInterceptor commandInterceptor3;
+
+  private Map<String, CommandInterceptor> commandInterceptorMap = new HashMap<>();
+
   @Before
   public void setUp() throws Exception {
     setUpCommandInterceptors();
@@ -60,7 +77,8 @@ public class InterceptorUtilTest {
 
   @After
   public void tearDown() throws Exception {
-    verifyNoMoreInteractions(commandInterceptor);
+    verifyNoMoreInteractions(commandInterceptor, commandInterceptor1,
+        commandInterceptor2, commandInterceptor3, applicationContext);
   }
 
   private void setUpCommandInterceptors() {
@@ -131,6 +149,53 @@ public class InterceptorUtilTest {
     InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable);
 
     verify(commandInterceptor, times(1)).afterFailedExecute(dataCommand, REQUEST, throwable);
+  }
+
+  @Test
+  public void testGetCommandInterceptorFromNullMap() {
+    List<CommandInterceptor> interceptors = InterceptorUtil.getCommandInterceptors(applicationContext);
+    assertTrue(interceptors.isEmpty());
+
+    verify(applicationContext).getBeansOfType(CommandInterceptor.class);
+  }
+
+  @Test
+  public void testGetCommandInterceptorFromEmptyMap() {
+    mockApplicationContextGetBeanCommandInterceptor();
+    List<CommandInterceptor> interceptors = InterceptorUtil.getCommandInterceptors(applicationContext);
+    assertTrue(interceptors.isEmpty());
+
+    verify(applicationContext).getBeansOfType(CommandInterceptor.class);
+  }
+
+  private void mockApplicationContextGetBeanCommandInterceptor() {
+    when(applicationContext.getBeansOfType(CommandInterceptor.class))
+        .thenReturn(commandInterceptorMap);
+  }
+
+  @Test
+  public void testGetCommandInterceptor() {
+    mockApplicationContextGetBeanCommandInterceptor();
+    mockCommandInterceptorMap();
+
+    List<CommandInterceptor> interceptors = InterceptorUtil.getCommandInterceptors(applicationContext);
+    assertSame(commandInterceptor3, interceptors.get(0));
+    assertSame(commandInterceptor2, interceptors.get(1));
+    assertSame(commandInterceptor1, interceptors.get(2));
+
+    verify(commandInterceptor1).getOrder();
+    verify(commandInterceptor2, times(2)).getOrder();
+    verify(commandInterceptor3).getOrder();
+    verify(applicationContext).getBeansOfType(CommandInterceptor.class);
+  }
+
+  private void mockCommandInterceptorMap() {
+    when(commandInterceptor1.getOrder()).thenReturn(3);
+    when(commandInterceptor2.getOrder()).thenReturn(2);
+    when(commandInterceptor3.getOrder()).thenReturn(1);
+    commandInterceptorMap.put("1", commandInterceptor1);
+    commandInterceptorMap.put("2", commandInterceptor2);
+    commandInterceptorMap.put("3", commandInterceptor3);
   }
 
   private static interface DataCommand extends Command<String, String> {

@@ -2,8 +2,10 @@ package com.blibli.oss.command.plugin;
 
 import com.blibli.oss.command.Command;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.OrderComparator;
 
-import java.util.Collection;
+import java.util.*;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -11,6 +13,18 @@ import java.util.Collection;
  */
 @Slf4j
 public class InterceptorUtil {
+
+  public static List<CommandInterceptor> getCommandInterceptors(ApplicationContext applicationContext) {
+    List<CommandInterceptor> interceptors = Collections.emptyList();
+
+    Map<String, CommandInterceptor> beans = applicationContext.getBeansOfType(CommandInterceptor.class);
+    if (beans != null && !beans.isEmpty()) {
+      interceptors = new ArrayList<>(beans.values());
+    }
+
+    OrderComparator.sort(interceptors);
+    return interceptors;
+  }
 
   public static <R, T> T beforeExecute(Collection<CommandInterceptor> commandInterceptors, Command<R, T> command, R request) {
     for (CommandInterceptor interceptor : commandInterceptors) {
