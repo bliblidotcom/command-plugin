@@ -1,12 +1,13 @@
 package com.blibli.oss.command.plugin;
 
 import com.blibli.oss.command.Command;
+import org.springframework.core.Ordered;
 
 /**
  * @author Eko Kurniawan Khannedy
  * @since 01/02/18
  */
-public interface CommandInterceptor {
+public interface CommandInterceptor extends Ordered {
 
   /**
    * Invoked before command executed, if return <code>null</code>,
@@ -49,4 +50,13 @@ public interface CommandInterceptor {
     // DO NOTHING
   }
 
+  /**
+   * Get the order value of this object.
+   *
+   * @return default is 0
+   */
+  @Override
+  default int getOrder() {
+    return 0;
+  }
 }

@@ -32,7 +32,7 @@ public class CommandProcessorImpl implements CommandProcessor, ApplicationContex
 
   private ApplicationContext applicationContext;
 
-  private Collection<CommandInterceptor> commandInterceptors = Collections.emptyList();
+  private Collection<CommandInterceptor> commandInterceptors;
 
   public CommandProcessorImpl(CommandProperties commandProperties, CommandKeyStrategy commandKeyStrategy, CommandGroupStrategy commandGroupStrategy) {
     this.commandProperties = commandProperties;
@@ -47,14 +47,7 @@ public class CommandProcessorImpl implements CommandProcessor, ApplicationContex
 
   @Override
   public void afterPropertiesSet() throws Exception {
-    loadCommandInterceptors();
-  }
-
-  private void loadCommandInterceptors() {
-    Map<String, CommandInterceptor> interceptorMap = applicationContext.getBeansOfType(CommandInterceptor.class);
-    if (interceptorMap != null && !interceptorMap.isEmpty()) {
-      commandInterceptors = interceptorMap.values();
-    }
+    commandInterceptors = InterceptorUtil.getCommandInterceptors(applicationContext);
   }
 
   @Override
