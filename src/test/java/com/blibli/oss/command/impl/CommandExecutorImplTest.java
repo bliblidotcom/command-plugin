@@ -162,6 +162,20 @@ public class CommandExecutorImplTest {
   }
 
   @Test
+  public void testCommandValidationException2() throws Exception {
+    request.setName(""); // blank
+
+    String errorMessage = null;
+    try {
+      commandExecutor.execute(DataCommand.class, request).toBlocking().value();
+    } catch (CommandValidationException cve) {
+      errorMessage = cve.getMessage();
+    }
+
+    assertEquals("{name=[may not be empty]}", errorMessage);
+  }
+
+  @Test
   public void testSuccess() throws Exception {
     String result = commandExecutor.execute(DataCommand.class, request).toBlocking().value();
     assertEquals("OK", result);
