@@ -17,6 +17,11 @@
 package com.blibli.oss.command.exception;
 
 import javax.validation.ConstraintViolation;
+import javax.validation.Path;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -27,6 +32,15 @@ public class CommandValidationException extends CommandRuntimeException {
   private Set<ConstraintViolation<?>> constraintViolations;
 
   public CommandValidationException(Set constraintViolations) {
+    this(Errors.from(constraintViolations).toString(), constraintViolations);
+  }
+
+  public CommandValidationException(String message, Set constraintViolations) {
+    this(message, null, constraintViolations);
+  }
+
+  public CommandValidationException(String message, Throwable cause, Set constraintViolations) {
+    super(message, cause);
     this.constraintViolations = constraintViolations;
   }
 
