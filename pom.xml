@@ -4,7 +4,7 @@
 
   <groupId>com.blibli.oss</groupId>
   <artifactId>command-plugin</artifactId>
-  <version>0.0.5</version>
+  <version>0.0.6-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>command-plugin</name>
@@ -13,7 +13,7 @@
   <scm>
     <connection>scm:git:git@github.com:bliblidotcom/command-plugin.git</connection>
     <developerConnection>scm:git:git@github.com:bliblidotcom/command-plugin.git</developerConnection>
-    <tag>command-plugin-0.0.5</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <parent>
