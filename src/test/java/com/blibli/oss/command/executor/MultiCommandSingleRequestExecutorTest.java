@@ -50,13 +50,13 @@ public class MultiCommandSingleRequestExecutorTest {
   private MultiCommandSingleRequestExecutor executor;
 
   private HelloCommandRequest request = HelloCommandRequest.builder()
-      .name("Eko")
-      .build();
+    .name("Eko")
+    .build();
 
   @Test
   public void test2Commands() {
     Tuple2<HelloCommandResponse, HelloCommandResponse> response =
-        executor.executeAll(HelloCommand.class, ByeCommand.class, request).toBlocking().value();
+      executor.executeAll(HelloCommand.class, ByeCommand.class, request).toBlocking().value();
 
     assertEquals(HELLO_EKO, response.getFirst().getSay());
     assertEquals(BYE_EKO, response.getSecond().getSay());
@@ -65,7 +65,7 @@ public class MultiCommandSingleRequestExecutorTest {
   @Test
   public void test3Commands() {
     Tuple3<HelloCommandResponse, HelloCommandResponse, HelloCommandResponse> response =
-        executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, request).toBlocking().value();
+      executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, request).toBlocking().value();
 
     assertEquals(HELLO_EKO, response.getFirst().getSay());
     assertEquals(BYE_EKO, response.getSecond().getSay());
@@ -75,7 +75,7 @@ public class MultiCommandSingleRequestExecutorTest {
   @Test
   public void test4Commands() {
     Tuple4<HelloCommandResponse, HelloCommandResponse, HelloCommandResponse, HelloCommandResponse> response =
-        executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, ByeCommand.class, request).toBlocking().value();
+      executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, ByeCommand.class, request).toBlocking().value();
 
     assertEquals(HELLO_EKO, response.getFirst().getSay());
     assertEquals(BYE_EKO, response.getSecond().getSay());
@@ -86,7 +86,7 @@ public class MultiCommandSingleRequestExecutorTest {
   @Test
   public void test5Commands() {
     Tuple5<HelloCommandResponse, HelloCommandResponse, HelloCommandResponse, HelloCommandResponse, HelloCommandResponse> response =
-        executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, ByeCommand.class, HelloCommand.class, request).toBlocking().value();
+      executor.executeAll(HelloCommand.class, ByeCommand.class, HelloCommand.class, ByeCommand.class, HelloCommand.class, request).toBlocking().value();
 
     assertEquals(HELLO_EKO, response.getFirst().getSay());
     assertEquals(BYE_EKO, response.getSecond().getSay());
@@ -130,9 +130,9 @@ public class MultiCommandSingleRequestExecutorTest {
 
     @Override
     public Single<HelloCommandResponse> execute(HelloCommandRequest request) {
-      return Single.just(HelloCommandResponse.builder()
-          .say("Hello " + request.getName())
-          .build());
+      return single(() -> HelloCommandResponse.builder()
+        .say("Hello " + request.getName())
+        .build());
     }
   }
 
@@ -140,9 +140,9 @@ public class MultiCommandSingleRequestExecutorTest {
 
     @Override
     public Single<HelloCommandResponse> execute(HelloCommandRequest request) {
-      return Single.just(HelloCommandResponse.builder()
-          .say("Bye " + request.getName())
-          .build());
+      return single(() -> HelloCommandResponse.builder()
+        .say("Bye " + request.getName())
+        .build());
     }
   }
 

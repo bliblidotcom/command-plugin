@@ -14,13 +14,7 @@ public class UpperCommandImpl implements UpperCommand {
 
   @Override
   public Single<String> execute(UpperCommandRequest request) {
-    return Single.create(singleSubscriber -> {
-      try {
-        singleSubscriber.onSuccess(request.getName().toUpperCase());
-      } catch (Throwable ex) {
-        singleSubscriber.onError(ex);
-      }
-    });
+    return single(() -> request.getName().toUpperCase());
   }
 
   @Override

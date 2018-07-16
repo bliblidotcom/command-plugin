@@ -420,7 +420,7 @@ public class CommandExecutorImplTest {
 
     @Override
     public Single<String> execute(DataCommandRequest request) {
-      return Single.just(response);
+      return single(() -> response);
     }
 
     @Override
