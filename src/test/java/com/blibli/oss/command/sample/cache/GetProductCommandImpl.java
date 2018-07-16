@@ -13,12 +13,12 @@ public class GetProductCommandImpl implements GetProductCommand {
 
   @Override
   public Single<GetProductCommandResponse> execute(GetProductCommandRequest request) {
-    return Single.create(singleSubscriber -> {
+    return single(() -> {
       log.info("Execute GetProductCommand");
-      singleSubscriber.onSuccess(GetProductCommandResponse.builder()
-          .id(request.getId())
-          .name(request.getId())
-          .build());
+      return GetProductCommandResponse.builder()
+        .id(request.getId())
+        .name(request.getId())
+        .build();
     });
   }
 

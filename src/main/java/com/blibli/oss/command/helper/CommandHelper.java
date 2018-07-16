@@ -14,26 +14,25 @@
  * limitations under the License.
  */
 
-package com.blibli.oss.command.sample.validation;
+package com.blibli.oss.command.helper;
 
-import org.springframework.stereotype.Component;
+import rx.Observable;
 import rx.Single;
+
+import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 /**
  * @author Eko Kurniawan Khannedy
  */
-@Component
-public class NoValidationCommandImpl implements NoValidationCommand {
+public interface CommandHelper {
 
-  @Override
-  public Single<NoValidationCommandResponse> execute(NoValidationCommandRequest request) {
-    return single(() -> NoValidationCommandResponse.builder()
-      .response(request.getName())
-      .build());
+  default <T> Single<T> single(Supplier<T> supplier) {
+    return RxHelper.single(supplier);
   }
 
-  @Override
-  public boolean validateRequest() {
-    return false;
+  default <T> Observable<T> observable(Supplier<Stream<T>> supplier) {
+    return RxHelper.observable(supplier);
   }
+
 }

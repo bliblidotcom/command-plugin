@@ -1,5 +1,6 @@
 package com.blibli.oss.command;
 
+import com.blibli.oss.command.helper.CommandHelper;
 import rx.Single;
 
 import java.util.Collection;
@@ -7,7 +8,7 @@ import java.util.Collection;
 /**
  * @author Eko Kurniawan Khannedy
  */
-public interface Command<R, T> {
+public interface Command<R, T> extends CommandHelper {
 
   /**
    * Command logic implementation
