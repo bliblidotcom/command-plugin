@@ -16,8 +16,6 @@
 
 package com.blibli.oss.command.exception;
 
-import com.blibli.oss.command.helper.ErrorHelper;
-
 import javax.validation.ConstraintViolation;
 import java.util.Set;
 
