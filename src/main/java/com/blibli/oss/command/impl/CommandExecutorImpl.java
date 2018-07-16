@@ -5,6 +5,7 @@ import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
 import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.exception.CommandValidationException;
+import com.blibli.oss.command.helper.ErrorHelper;
 import com.blibli.oss.command.tuple.*;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
@@ -175,7 +176,9 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
       throws CommandValidationException {
     Set<ConstraintViolation<R>> constraintViolations = validator.validate(request);
     if (!constraintViolations.isEmpty()) {
-      throw new CommandValidationException(constraintViolations);
+      String validationMessage = ErrorHelper.from(constraintViolations).toString();
+      log.warn("Invalid command request with validation message {}", validationMessage);
+      throw new CommandValidationException(validationMessage, constraintViolations);
     }
   }
 

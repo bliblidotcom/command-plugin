@@ -27,6 +27,11 @@ public class CommandValidationException extends CommandRuntimeException {
   private Set<ConstraintViolation<?>> constraintViolations;
 
   public CommandValidationException(Set constraintViolations) {
+    this(null, constraintViolations);
+  }
+
+  public CommandValidationException(String message, Set constraintViolations) {
+    super(message);
     this.constraintViolations = constraintViolations;
   }
 
