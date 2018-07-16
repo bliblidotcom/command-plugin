@@ -16,6 +16,8 @@
 
 package com.blibli.oss.command.exception;
 
+import com.blibli.oss.command.helper.ErrorHelper;
+
 import javax.validation.ConstraintViolation;
 import java.util.Set;
 
@@ -27,6 +29,11 @@ public class CommandValidationException extends CommandRuntimeException {
   private Set<ConstraintViolation<?>> constraintViolations;
 
   public CommandValidationException(Set constraintViolations) {
+    this(null, constraintViolations);
+  }
+
+  public CommandValidationException(String message, Set constraintViolations) {
+    super(message);
     this.constraintViolations = constraintViolations;
   }
 

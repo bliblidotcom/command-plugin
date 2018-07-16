@@ -11,4 +11,8 @@ public class CommandRuntimeException extends RuntimeException {
   public CommandRuntimeException(Throwable cause) {
     super(cause);
   }
+
+  public CommandRuntimeException(String message) {
+    super(message);
+  }
 }
