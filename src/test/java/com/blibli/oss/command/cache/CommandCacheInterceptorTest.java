@@ -17,9 +17,10 @@
 package com.blibli.oss.command.cache;
 
 import com.blibli.oss.command.Command;
-import com.blibli.oss.command.properties.CommandProperties;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -28,8 +29,8 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import reactor.core.publisher.Mono;
 
-import java.util.Collection;
 import java.util.Collections;
 
 import static org.junit.Assert.*;
@@ -40,20 +41,15 @@ import static org.mockito.Mockito.*;
  */
 public class CommandCacheInterceptorTest {
 
-  private static final String CACHE_KEY = "CACHE_KEY";
-  private static final String DATA = "DATA";
-  private static final String CACHE_VALUE = "CACHE_VALUE";
-  private static final String MAPPER_VALUE = "MAPPER_VALUE";
-  private static final String RESPONSE = "RESPONSE";
-
+  public static final String CACHE_KEY = "cacheKey";
+  public static final String CACHE_VALUE = "cacheValue";
+  public static final String ID = "id";
+  public static final DataResponse DATA_RESPONSE = DataResponse.builder().id(ID).build();
+  public static final DataRequest DATA_REQUEST = DataRequest.builder()
+    .id(ID)
+    .build();
   @Rule
   public MockitoRule mockitoRule = MockitoJUnit.rule();
-
-  @Mock
-  private CommandProperties commandProperties;
-
-  @Mock
-  private CommandProperties.CacheProperties cacheProperties;
 
   @Mock
   private CommandCache commandCache;
@@ -62,169 +58,94 @@ public class CommandCacheInterceptorTest {
   private CommandCacheMapper commandCacheMapper;
 
   @InjectMocks
-  private CommandCacheInterceptor commandCacheInterceptor;
+  private CommandCacheInterceptor interceptor;
 
   @Mock
   private DataCommand dataCommand;
 
-  private DataCommandRequest dataCommandRequest;
-
   @Before
   public void setUp() throws Exception {
-    setUpCommandProperties();
-    setUpCommandRequest();
+
   }
 
-  private void setUpCommandProperties() {
-    when(commandProperties.getCache()).thenReturn(cacheProperties);
+  @Test
+  public void beforeExecuteWithResult() {
+    when(dataCommand.cacheKey(DATA_REQUEST))
+      .thenReturn(CACHE_KEY);
+    when(commandCache.get(CACHE_KEY))
+      .thenReturn(Mono.just(CACHE_VALUE));
+    when(dataCommand.responseClass())
+      .thenReturn(DataResponse.class);
+    when(commandCacheMapper.fromString(CACHE_VALUE, DataResponse.class))
+      .thenReturn(DATA_RESPONSE);
+
+    DataResponse response = interceptor.beforeExecute(dataCommand, DATA_REQUEST).block();
+
+    assertEquals(DATA_RESPONSE, response);
+
+    verify(dataCommand).cacheKey(DATA_REQUEST);
+    verify(commandCache).get(CACHE_KEY);
+    verify(dataCommand).responseClass();
+    verify(commandCacheMapper).fromString(CACHE_VALUE, DataResponse.class);
   }
 
-  private void setUpCommandRequest() {
-    dataCommandRequest = DataCommandRequest.builder()
-        .data(DATA)
-        .build();
+  @Test
+  public void beforeExecuteNoResult() {
+    DataResponse response = interceptor.beforeExecute(dataCommand, DATA_REQUEST).block();
+
+    assertNull(response);
+
+    verify(dataCommand).cacheKey(DATA_REQUEST);
+  }
+
+  @Test
+  public void afterSuccessExecute() {
+    when(dataCommand.cacheKey(DATA_REQUEST))
+      .thenReturn(CACHE_KEY);
+    when(dataCommand.evictKeys(DATA_REQUEST))
+      .thenReturn(Collections.singletonList(CACHE_KEY));
+    when(commandCacheMapper.toString(DATA_RESPONSE))
+      .thenReturn(CACHE_VALUE);
+    when(commandCache.cache(CACHE_KEY, CACHE_VALUE))
+      .thenReturn(Mono.just(true));
+    when(commandCache.evict(CACHE_KEY))
+      .thenReturn(Mono.just(1L));
+
+    Void result = interceptor.afterSuccessExecute(dataCommand, DATA_REQUEST, DATA_RESPONSE).block();
+
+    assertNull(result);
+
+    verify(dataCommand).cacheKey(DATA_REQUEST);
+    verify(dataCommand).evictKeys(DATA_REQUEST);
+    verify(commandCacheMapper).toString(DATA_RESPONSE);
+    verify(commandCache).cache(CACHE_KEY, CACHE_VALUE);
+    verify(commandCache).evict(CACHE_KEY);
   }
 
   @After
   public void tearDown() throws Exception {
-    verifyNoMoreInteractions(commandCache, commandCacheMapper, dataCommand);
-  }
-
-  @Test
-  public void testBeforeExecuteDisabled() {
-    setUpCachePropertiesDisabled();
-    String response = commandCacheInterceptor.beforeExecute(dataCommand, dataCommandRequest);
-    assertNull(response);
-  }
-
-  private void setUpCachePropertiesDisabled() {
-    when(cacheProperties.isEnabled()).thenReturn(false);
-  }
-
-  @Test
-  public void testBeforeExecuteCacheKeyNull() {
-    setUpCachePropertiesEnabled();
-    mockDataCommandCacheKeyNull();
-    String response = commandCacheInterceptor.beforeExecute(dataCommand, dataCommandRequest);
-    assertNull(response);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-  }
-
-  private void mockDataCommandCacheKeyNull() {
-    when(dataCommand.cacheKey(dataCommandRequest)).thenReturn(null);
-  }
-
-  private void setUpCachePropertiesEnabled() {
-    when(cacheProperties.isEnabled()).thenReturn(true);
-  }
-
-  @Test
-  public void testBeforeExecuteCommandCacheNull() {
-    setUpCachePropertiesEnabled();
-    mockDataCommandCacheKey();
-    mockCommandCacheGetNull();
-    String response = commandCacheInterceptor.beforeExecute(dataCommand, dataCommandRequest);
-    assertNull(response);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(commandCache, times(1)).get(CACHE_KEY);
-  }
-
-  private void mockCommandCacheGetNull() {
-    when(commandCache.get(CACHE_KEY)).thenReturn(null);
-  }
-
-  private void mockDataCommandCacheKey() {
-    when(dataCommand.cacheKey(dataCommandRequest)).thenReturn(CACHE_KEY);
-  }
-
-  @Test
-  public void testBeforeExecuteSuccess() {
-    setUpCachePropertiesEnabled();
-    mockDataCommandCacheKey();
-    mockCommandCacheGet();
-    mockDataCommandResponseClass();
-    mockCommandCacheMapperFromString();
-    String response = commandCacheInterceptor.beforeExecute(dataCommand, dataCommandRequest);
-    assertEquals(MAPPER_VALUE, response);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(commandCache, times(1)).get(CACHE_KEY);
-    verify(dataCommand, times(1)).responseClass();
-    verify(commandCacheMapper, times(1)).fromString(CACHE_VALUE, String.class);
-  }
-
-  private void mockCommandCacheMapperFromString() {
-    when(commandCacheMapper.fromString(CACHE_VALUE, String.class)).thenReturn(MAPPER_VALUE);
-  }
-
-  private void mockDataCommandResponseClass() {
-    when(dataCommand.responseClass()).thenReturn(String.class);
-  }
-
-  private void mockCommandCacheGet() {
-    when(commandCache.get(CACHE_KEY)).thenReturn(CACHE_VALUE);
-  }
-
-  @Test
-  public void testAfterSuccessExecuteCacheDisabled() {
-    setUpCachePropertiesDisabled();
-    commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
-
-    verify(dataCommand, times(0)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(0)).evictKeys(dataCommandRequest);
-  }
-
-  @Test
-  public void testAfterSuccessExecuteCacheEnabled() {
-    setUpCachePropertiesEnabled();
-    commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
-  }
-
-  @Test
-  public void testAfterSuccessExecuteCache() {
-    setUpCachePropertiesEnabled();
-    mockDataCommandCacheKey();
-    mockCommandCacheMapperToString();
-    commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
-    verify(commandCacheMapper, times(1)).toString(RESPONSE);
-    verify(commandCache, times(1)).cache(CACHE_KEY, MAPPER_VALUE);
-  }
-
-  private void mockCommandCacheMapperToString() {
-    when(commandCacheMapper.toString(RESPONSE)).thenReturn(MAPPER_VALUE);
-  }
-
-  @Test
-  public void testAfterSuccessExecuteEvict() {
-    setUpCachePropertiesEnabled();
-    mockCommandEvictKey();
-    commandCacheInterceptor.afterSuccessExecute(dataCommand, dataCommandRequest, RESPONSE);
-
-    verify(dataCommand, times(1)).cacheKey(dataCommandRequest);
-    verify(dataCommand, times(1)).evictKeys(dataCommandRequest);
-    verify(commandCache, times(1)).evict(CACHE_KEY);
-  }
-
-  private void mockCommandEvictKey() {
-    when(dataCommand.evictKeys(dataCommandRequest)).thenReturn(Collections.singleton(CACHE_KEY));
+    verifyNoMoreInteractions(commandCache, commandCacheMapper);
   }
 
   @Data
   @Builder
-  private static class DataCommandRequest {
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public static class DataRequest {
 
-    private String data;
+    private String id;
   }
 
-  private static interface DataCommand extends Command<DataCommandRequest, String> {
+  @Data
+  @Builder
+  @AllArgsConstructor
+  @NoArgsConstructor
+  public static class DataResponse {
+
+    private String id;
+  }
+
+  public static interface DataCommand extends Command<DataRequest, DataResponse> {
 
   }
 }

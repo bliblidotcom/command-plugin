@@ -26,7 +26,7 @@ public class UpperCommandImplTest {
   @Test
   public void testSuccess() {
     request = UpperCommandRequest.builder().name("Eko Kurniawan Khannedy").build();
-    String response = commandExecutor.execute(UpperCommand.class, request).toBlocking().value();
+    String response = commandExecutor.execute(UpperCommand.class, request).block();
 
     assertEquals("EKO KURNIAWAN KHANNEDY", response);
   }
@@ -34,7 +34,7 @@ public class UpperCommandImplTest {
   @Test
   public void testFallback() {
     request = UpperCommandRequest.builder().build();
-    String response = commandExecutor.execute(UpperCommand.class, request).toBlocking().value();
+    String response = commandExecutor.execute(UpperCommand.class, request).block();
 
     assertEquals("FALLBACK", response);
   }

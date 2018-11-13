@@ -50,7 +50,7 @@ public class NoValidationCommandImplTest {
   @Test
   public void testNoValidation() {
     NoValidationCommandResponse response = commandExecutor.execute(NoValidationCommand.class, NoValidationCommandRequest.builder().build())
-        .toBlocking().value();
+        .block();
 
     assertNull(response.getResponse());
 

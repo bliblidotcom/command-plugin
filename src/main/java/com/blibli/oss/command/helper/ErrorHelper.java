@@ -26,6 +26,7 @@ import java.util.*;
 public class ErrorHelper {
 
   public static final String SEPARATOR = ".";
+  public static final String PATH = "path";
 
   public static <T> Map<String, List<String>> from(Set<ConstraintViolation<T>> constraintViolations) {
     Map<String, List<String>> map = new HashMap<>(constraintViolations.size());
@@ -47,7 +48,7 @@ public class ErrorHelper {
   }
 
   private static String[] getAttributes(ConstraintViolation<?> constraintViolation) {
-    String[] values = (String[]) constraintViolation.getConstraintDescriptor().getAttributes().get("path");
+    String[] values = (String[]) constraintViolation.getConstraintDescriptor().getAttributes().get(PATH);
     if (values == null || values.length == 0) {
       return getAttributesFromPath(constraintViolation);
     } else {

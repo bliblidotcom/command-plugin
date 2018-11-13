@@ -17,7 +17,7 @@
 package com.blibli.oss.command.sample.validation;
 
 import org.springframework.stereotype.Component;
-import rx.Single;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -26,8 +26,8 @@ import rx.Single;
 public class NoValidationCommandImpl implements NoValidationCommand {
 
   @Override
-  public Single<NoValidationCommandResponse> execute(NoValidationCommandRequest request) {
-    return single(() -> NoValidationCommandResponse.builder()
+  public Mono<NoValidationCommandResponse> execute(NoValidationCommandRequest request) {
+    return mono(() -> NoValidationCommandResponse.builder()
       .response(request.getName())
       .build());
   }

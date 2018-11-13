@@ -9,13 +9,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.reactivestreams.Publisher;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit4.SpringRunner;
+import reactor.core.publisher.Mono;
 
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
@@ -24,26 +29,27 @@ import static org.mockito.Mockito.*;
  * @author Eko Kurniawan Khannedy
  */
 @RunWith(SpringRunner.class)
-@SpringBootTest(classes = GetProductCommandImplTest.Application.class)
+@SpringBootTest(
+  classes = GetProductCommandImplTest.Application.class,
+  properties = {
+    "command.cache.enabled=true"
+  }
+)
 public class GetProductCommandImplTest {
 
-  @MockBean
-  private StringRedisTemplate stringRedisTemplate;
+  public static final String CACHE_KEY = "khannedy";
 
   @MockBean
-  private ValueOperations<String, String> valueOperations;
+  private ReactiveStringRedisTemplate stringRedisTemplate;
+
+  @MockBean
+  private ReactiveValueOperations<String, String> valueOperations;
 
   @Autowired
   private CommandProperties commandProperties;
 
   @Autowired
   private CommandExecutor commandExecutor;
-
-  @Autowired
-  private CommandCache commandCache;
-
-  @Autowired
-  private CommandCacheMapper commandCacheMapper;
 
   @Autowired
   private ObjectMapper objectMapper;
@@ -55,165 +61,58 @@ public class GetProductCommandImplTest {
 
   @Test
   public void testExecuteCommand() {
-    commandProperties.getCache().setEnabled(true);
+    when(valueOperations.get(CACHE_KEY))
+      .thenReturn(Mono.empty());
+    when(valueOperations.set(eq(CACHE_KEY), anyString(), eq(commandProperties.getCache().getTimeoutDuration())))
+      .thenReturn(Mono.just(true));
+    when(stringRedisTemplate.delete(any(Publisher.class)))
+      .thenReturn(Mono.just(1L));
 
     GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
+      .id(CACHE_KEY)
+      .build();
 
     GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
+      .block();
 
     assertEquals(request.getId(), response.getId());
     assertEquals(request.getId(), response.getName());
 
     verify(stringRedisTemplate, times(2))
-        .opsForValue();
+      .opsForValue();
     verify(valueOperations, times(1))
-        .get("khannedy");
+      .get(CACHE_KEY);
     verify(valueOperations, times(1))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
+      .set(eq(CACHE_KEY), anyString(),
+        eq(commandProperties.getCache().getTimeoutDuration()));
+    verify(stringRedisTemplate, times(1))
+      .delete(any(Publisher.class));
   }
 
   @Test
   public void testExecuteCache() throws JsonProcessingException {
-    commandProperties.getCache().setEnabled(true);
-
     GetProductCommandResponse cacheResponse = GetProductCommandResponse.builder()
-        .id("khannedy")
-        .name("Cache")
-        .build();
+      .id(CACHE_KEY)
+      .name("Cache")
+      .build();
 
-    when(valueOperations.get("khannedy"))
-        .thenReturn(objectMapper.writeValueAsString(cacheResponse));
+    when(valueOperations.get(CACHE_KEY))
+      .thenReturn(Mono.just(objectMapper.writeValueAsString(cacheResponse)));
 
     GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
+      .id(CACHE_KEY)
+      .build();
 
     GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
+      .block();
 
     assertEquals(request.getId(), response.getId());
     assertEquals(cacheResponse.getName(), response.getName());
 
     verify(stringRedisTemplate, times(1))
-        .opsForValue();
+      .opsForValue();
     verify(valueOperations, times(1))
-        .get("khannedy");
-    verify(valueOperations, times(0))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
-  }
-
-  @Test
-  public void testExecuteHystrixCommand() {
-    commandProperties.getCache().setEnabled(true);
-    commandProperties.getHystrix().setEnabled(true);
-
-    GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
-
-    GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
-
-    assertEquals(request.getId(), response.getId());
-    assertEquals(request.getId(), response.getName());
-
-    verify(stringRedisTemplate, times(2))
-        .opsForValue();
-    verify(valueOperations, times(1))
-        .get("khannedy");
-    verify(valueOperations, times(1))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
-  }
-
-  @Test
-  public void testExecuteHystrixCache() throws JsonProcessingException {
-    commandProperties.getCache().setEnabled(true);
-    commandProperties.getHystrix().setEnabled(true);
-
-    GetProductCommandResponse cacheResponse = GetProductCommandResponse.builder()
-        .id("khannedy")
-        .name("Cache")
-        .build();
-
-    when(valueOperations.get("khannedy"))
-        .thenReturn(objectMapper.writeValueAsString(cacheResponse));
-
-    GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
-
-    GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
-
-    assertEquals(request.getId(), response.getId());
-    assertEquals(cacheResponse.getName(), response.getName());
-
-    verify(stringRedisTemplate, times(1))
-        .opsForValue();
-    verify(valueOperations, times(1))
-        .get("khannedy");
-    verify(valueOperations, times(0))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
-  }
-
-  @Test
-  public void testExecuteNonCache() throws JsonProcessingException {
-    commandProperties.getCache().setEnabled(false);
-
-    GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
-
-    GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
-
-    assertEquals(request.getId(), response.getId());
-    assertEquals(request.getId(), response.getName());
-
-    verify(stringRedisTemplate, times(0))
-        .opsForValue();
-    verify(valueOperations, times(0))
-        .get("khannedy");
-    verify(valueOperations, times(0))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
-  }
-
-  @Test
-  public void testExecuteHystrixNonCache() throws JsonProcessingException {
-    commandProperties.getCache().setEnabled(false);
-    commandProperties.getHystrix().setEnabled(true);
-
-    GetProductCommandRequest request = GetProductCommandRequest.builder()
-        .id("khannedy")
-        .build();
-
-    GetProductCommandResponse response = commandExecutor.execute(GetProductCommand.class, request)
-        .toBlocking().value();
-
-    assertEquals(request.getId(), response.getId());
-    assertEquals(request.getId(), response.getName());
-
-    verify(stringRedisTemplate, times(0))
-        .opsForValue();
-    verify(valueOperations, times(0))
-        .get("khannedy");
-    verify(valueOperations, times(0))
-        .set(eq("khannedy"), anyString(),
-            eq(commandProperties.getCache().getTimeout()),
-            eq(commandProperties.getCache().getTimeoutUnit()));
+      .get(CACHE_KEY);
   }
 
   @SpringBootApplication
