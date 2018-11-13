@@ -78,12 +78,8 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
 
   private <R, T> Mono<T> doExecuteCommand(R request, Command<R, T> command) {
     return command.execute(request)
-      .doOnSuccess(response -> InterceptorUtil.afterSuccessExecute(commandInterceptors, command, request, response).subscribe(
-        aLong -> log.info("Success execute {} after success interceptor", aLong)
-      ))
-      .doOnError(throwable -> InterceptorUtil.afterFailedExecute(commandInterceptors, command, request, throwable).subscribe(
-        aLong -> log.info("Success execute {} after error interceptor", aLong)
-      ))
+      .doOnSuccess(response -> InterceptorUtil.afterSuccessExecute(commandInterceptors, command, request, response).subscribe())
+      .doOnError(throwable -> InterceptorUtil.afterFailedExecute(commandInterceptors, command, request, throwable).subscribe())
       .onErrorResume(throwable -> command.fallback(throwable, request));
   }
 
