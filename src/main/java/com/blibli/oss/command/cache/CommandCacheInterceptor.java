@@ -2,9 +2,7 @@ package com.blibli.oss.command.cache;
 
 import com.blibli.oss.command.Command;
 import com.blibli.oss.command.plugin.CommandInterceptor;
-import com.blibli.oss.command.properties.CommandProperties;
-
-import java.util.Collection;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -12,62 +10,43 @@ import java.util.Collection;
  */
 public class CommandCacheInterceptor implements CommandInterceptor {
 
-  private CommandProperties commandProperties;
-
   private CommandCache commandCache;
 
   private CommandCacheMapper commandCacheMapper;
 
-  public CommandCacheInterceptor(CommandProperties commandProperties,
-                                 CommandCache commandCache,
+  public CommandCacheInterceptor(CommandCache commandCache,
                                  CommandCacheMapper commandCacheMapper) {
-    this.commandProperties = commandProperties;
     this.commandCache = commandCache;
     this.commandCacheMapper = commandCacheMapper;
   }
 
   @Override
-  public <R, T> T beforeExecute(Command<R, T> command, R request) {
-    if (!commandProperties.getCache().isEnabled()) {
-      return null;
-    }
-
-    String cacheKey = command.cacheKey(request);
-    if (cacheKey == null) {
-      return null;
-    }
-
-    String result = commandCache.get(cacheKey);
-    if (result == null) {
-      return null;
-    }
-
-    Class<T> responseClass = command.responseClass();
-    return commandCacheMapper.fromString(result, responseClass);
+  public <R, T> Mono<T> beforeExecute(Command<R, T> command, R request) {
+    return Mono.fromCallable(() -> command.cacheKey(request))
+      .flatMap(key -> commandCache.get(key))
+      .map(json -> commandCacheMapper.fromString(json, command.responseClass()));
   }
 
   @Override
-  public <R, T> void afterSuccessExecute(Command<R, T> command, R request, T response) {
-    if (commandProperties.getCache().isEnabled()) {
-      evictCommandResponse(command, request);
-      cacheCommandResponse(command, request, response);
-    }
+  public <R, T> Mono<Void> afterSuccessExecute(Command<R, T> command, R request, T response) {
+    return Mono.zip(
+      evictCommandResponse(command, request),
+      cacheCommandResponse(command, request, response)
+    ).flatMap(objects -> Mono.empty());
   }
 
-  private <R, T> void cacheCommandResponse(Command<R, T> command, R request, T response) {
-    String cacheKey = command.cacheKey(request);
-    if (cacheKey != null) {
-      String result = commandCacheMapper.toString(response);
-      commandCache.cache(cacheKey, result);
-    }
+  private <R, T> Mono<Boolean> cacheCommandResponse(Command<R, T> command, R request, T response) {
+    return Mono.zip(
+      Mono.fromCallable(() -> command.cacheKey(request)),
+      Mono.fromCallable(() -> commandCacheMapper.toString(response))
+    ).flatMap(tuple -> commandCache.cache(tuple.getT1(), tuple.getT2()))
+      .switchIfEmpty(Mono.just(false));
   }
 
-  private <R, T> void evictCommandResponse(Command<R, T> command, R request) {
-    Collection<String> evictKeys = command.evictKeys(request);
-    if (evictKeys != null) {
-      for (String evictKey : evictKeys) {
-        commandCache.evict(evictKey);
-      }
-    }
+  private <R, T> Mono<Long> evictCommandResponse(Command<R, T> command, R request) {
+    return Mono.fromCallable(() -> command.evictKeys(request))
+      .map(keys -> keys.toArray(new String[0]))
+      .flatMap(keys -> commandCache.evict(keys))
+      .switchIfEmpty(Mono.just(0L));
   }
 }

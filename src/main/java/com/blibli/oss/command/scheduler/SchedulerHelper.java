@@ -14,28 +14,12 @@
  * limitations under the License.
  */
 
-package com.blibli.oss.command.impl;
+package com.blibli.oss.command.scheduler;
 
-import com.blibli.oss.command.Command;
-import org.junit.Test;
+import reactor.core.scheduler.Scheduler;
 
-import static org.junit.Assert.assertEquals;
+public interface SchedulerHelper {
 
-/**
- * @author Eko Kurniawan Khannedy
- */
-public class CommandBuilderImplTest {
+  Scheduler of(String name);
 
-  private static final String REQUEST = "REQUEST";
-
-  @Test
-  public void test() {
-    CommandBuilderImpl<String, String> builder = new CommandBuilderImpl<>(REQUEST, DataCommand.class);
-    assertEquals(REQUEST, builder.getRequest());
-    assertEquals(DataCommand.class, builder.getCommandClass());
-  }
-
-  private static interface DataCommand extends Command<String, String> {
-
-  }
 }

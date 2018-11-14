@@ -2,7 +2,10 @@ package com.blibli.oss.command.sample.cache;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import rx.Single;
+import reactor.core.publisher.Mono;
+
+import java.util.Collection;
+import java.util.Collections;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -12,8 +15,8 @@ import rx.Single;
 public class GetProductCommandImpl implements GetProductCommand {
 
   @Override
-  public Single<GetProductCommandResponse> execute(GetProductCommandRequest request) {
-    return single(() -> {
+  public Mono<GetProductCommandResponse> execute(GetProductCommandRequest request) {
+    return mono(() -> {
       log.info("Execute GetProductCommand");
       return GetProductCommandResponse.builder()
         .id(request.getId())
@@ -30,5 +33,10 @@ public class GetProductCommandImpl implements GetProductCommand {
   @Override
   public Class<GetProductCommandResponse> responseClass() {
     return GetProductCommandResponse.class;
+  }
+
+  @Override
+  public Collection<String> evictKeys(GetProductCommandRequest request) {
+    return Collections.singletonList(request.getId());
   }
 }

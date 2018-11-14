@@ -16,16 +16,22 @@
 
 package com.blibli.oss.command;
 
-import com.blibli.oss.command.executor.MultiCommandExecutor;
-import com.blibli.oss.command.executor.MultiCommandSingleRequestExecutor;
-import com.blibli.oss.command.executor.SingleCommandExecutor;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Eko Kurniawan Khannedy
  */
-public interface CommandExecutor extends
-    SingleCommandExecutor,
-    MultiCommandExecutor,
-    MultiCommandSingleRequestExecutor {
+public interface CommandExecutor {
+
+  /**
+   * Execute mono command
+   *
+   * @param commandClass command class
+   * @param request      command request
+   * @param <R>          request type
+   * @param <T>          result type
+   * @return mono of result
+   */
+  <R, T> Mono<T> execute(Class<? extends Command<R, T>> commandClass, R request);
 
 }

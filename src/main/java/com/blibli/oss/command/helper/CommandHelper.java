@@ -16,8 +16,8 @@
 
 package com.blibli.oss.command.helper;
 
-import rx.Observable;
-import rx.Single;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
 import java.util.function.Supplier;
 import java.util.stream.Stream;
@@ -27,12 +27,12 @@ import java.util.stream.Stream;
  */
 public interface CommandHelper {
 
-  default <T> Single<T> single(Supplier<T> supplier) {
-    return RxHelper.single(supplier);
+  default <T> Mono<T> mono(Supplier<T> supplier) {
+    return Mono.fromSupplier(supplier);
   }
 
-  default <T> Observable<T> observable(Supplier<Stream<T>> supplier) {
-    return RxHelper.observable(supplier);
+  default <T> Flux<T> flux(Supplier<Stream<T>> supplier) {
+    return Flux.from(s -> Flux.fromStream(supplier.get()));
   }
 
 }

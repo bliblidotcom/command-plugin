@@ -2,7 +2,11 @@ package com.blibli.oss.command.cache.impl;
 
 import com.blibli.oss.command.cache.CommandCache;
 import com.blibli.oss.command.properties.CommandProperties;
-import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -11,30 +15,27 @@ public class CommandCacheImpl implements CommandCache {
 
   private CommandProperties commandProperties;
 
-  private StringRedisTemplate stringRedisTemplate;
+  private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
 
-  public CommandCacheImpl(StringRedisTemplate stringRedisTemplate,
+  public CommandCacheImpl(ReactiveStringRedisTemplate reactiveStringRedisTemplate,
                           CommandProperties commandProperties) {
-    this.stringRedisTemplate = stringRedisTemplate;
+    this.reactiveStringRedisTemplate = reactiveStringRedisTemplate;
     this.commandProperties = commandProperties;
   }
 
   @Override
-  public String get(String key) {
-    return stringRedisTemplate.opsForValue().get(key);
+  public Mono<String> get(String key) {
+    return reactiveStringRedisTemplate.opsForValue().get(key);
   }
 
   @Override
-  public void cache(String key, String value) {
-    stringRedisTemplate.opsForValue().set(
-        key, value,
-        commandProperties.getCache().getTimeout(),
-        commandProperties.getCache().getTimeoutUnit()
-    );
+  public Mono<Boolean> cache(String key, String value) {
+    return reactiveStringRedisTemplate.opsForValue()
+      .set(key, value, commandProperties.getCache().getTimeoutDuration());
   }
 
   @Override
-  public void evict(String key) {
-    stringRedisTemplate.delete(key);
+  public Mono<Long> evict(String... keys) {
+    return reactiveStringRedisTemplate.delete(Flux.fromArray(keys));
   }
 }

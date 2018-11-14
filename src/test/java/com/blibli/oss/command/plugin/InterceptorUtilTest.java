@@ -26,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 import org.springframework.context.ApplicationContext;
+import reactor.core.publisher.Mono;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -87,7 +88,8 @@ public class InterceptorUtilTest {
 
   @Test
   public void testBeforeExecuteNull() {
-    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST);
+    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenReturn(Mono.empty());
+    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST).block();
     assertNull(response);
 
     verify(commandInterceptor, times(1)).beforeExecute(dataCommand, REQUEST);
@@ -97,56 +99,60 @@ public class InterceptorUtilTest {
   public void testBeforeExecuteError() {
     mockCommandInterceptorBeforeExecuteError();
 
-    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST);
+    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST).block();
     assertNull(response);
 
     verify(commandInterceptor, times(1)).beforeExecute(dataCommand, REQUEST);
   }
 
   private void mockCommandInterceptorBeforeExecuteError() {
-    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenThrow(new CommandRuntimeException());
+    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenReturn(Mono.error(new CommandRuntimeException()));
   }
 
   @Test
   public void testBeforeExecute() {
     mockCommandInterceptorBeforeExecute();
 
-    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST);
+    String response = InterceptorUtil.beforeExecute(commandInterceptors, dataCommand, REQUEST).block();
     assertEquals(RESPONSE, response);
 
     verify(commandInterceptor, times(1)).beforeExecute(dataCommand, REQUEST);
   }
 
   private void mockCommandInterceptorBeforeExecute() {
-    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenReturn(RESPONSE);
+    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenReturn(Mono.just(RESPONSE));
   }
 
   @Test
   public void testAfterSuccessExecute() {
-    InterceptorUtil.afterSuccessExecute(commandInterceptors, dataCommand, REQUEST, RESPONSE);
+    when(commandInterceptor.afterSuccessExecute(dataCommand, REQUEST, RESPONSE)).thenReturn(Mono.empty());
+    InterceptorUtil.afterSuccessExecute(commandInterceptors, dataCommand, REQUEST, RESPONSE).block();
 
     verify(commandInterceptor, times(1)).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
   }
 
   @Test
   public void testAfterSuccessExecuteError() {
-    doThrow(new CommandRuntimeException()).when(commandInterceptor).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
-    InterceptorUtil.afterSuccessExecute(commandInterceptors, dataCommand, REQUEST, RESPONSE);
+    when(commandInterceptor.afterSuccessExecute(dataCommand, REQUEST, RESPONSE)).thenReturn(Mono.error(new CommandRuntimeException()));
+    InterceptorUtil.afterSuccessExecute(commandInterceptors, dataCommand, REQUEST, RESPONSE).block();
 
     verify(commandInterceptor, times(1)).afterSuccessExecute(dataCommand, REQUEST, RESPONSE);
   }
 
   @Test
   public void testAfterFailedExecute() {
-    InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable);
+    when(commandInterceptor.afterFailedExecute(dataCommand, REQUEST, throwable)).thenReturn(Mono.empty());
+
+    InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable).block();
 
     verify(commandInterceptor, times(1)).afterFailedExecute(dataCommand, REQUEST, throwable);
   }
 
   @Test
   public void testAfterFailedExecuteError() {
-    doThrow(new CommandRuntimeException()).when(commandInterceptor).afterFailedExecute(dataCommand, REQUEST, throwable);
-    InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable);
+    when(commandInterceptor.beforeExecute(dataCommand, REQUEST)).thenReturn(Mono.error(new CommandRuntimeException()));
+    when(commandInterceptor.afterFailedExecute(dataCommand, REQUEST, throwable)).thenReturn(Mono.error(new CommandRuntimeException()));
+    InterceptorUtil.afterFailedExecute(commandInterceptors, dataCommand, REQUEST, throwable).block();
 
     verify(commandInterceptor, times(1)).afterFailedExecute(dataCommand, REQUEST, throwable);
   }

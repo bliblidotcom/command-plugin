@@ -21,13 +21,21 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
+import org.reactivestreams.Publisher;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
+import org.springframework.data.redis.core.ReactiveValueOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.*;
@@ -38,11 +46,9 @@ import static org.mockito.Mockito.*;
  */
 public class CommandCacheImplTest {
 
-  private static final String VALUE = "VALUE";
-  private static final String KEY = "KEY";
-  private static final long TIMEOUT = 1000L;
-  private static final TimeUnit TIMEOUT_UNIT = TimeUnit.MILLISECONDS;
-
+  public static final String VALUE = "value";
+  public static final String KEY = "key";
+  public static final Duration DURATION = Duration.ZERO;
   @Rule
   public MockitoRule mockitoRule = MockitoJUnit.rule();
 
@@ -53,64 +59,59 @@ public class CommandCacheImplTest {
   private CommandProperties.CacheProperties cacheProperties;
 
   @Mock
-  private StringRedisTemplate stringRedisTemplate;
+  private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
 
   @Mock
-  private ValueOperations<String, String> valueOperations;
+  private ReactiveValueOperations<String, String> valueOperations;
 
   @InjectMocks
   private CommandCacheImpl commandCache;
 
   @Before
   public void setUp() throws Exception {
-    setUpStringRedisTemplateValueOperation();
-    setUpProperties();
-  }
-
-  private void setUpProperties() {
+    when(reactiveStringRedisTemplate.opsForValue()).thenReturn(valueOperations);
     when(commandProperties.getCache()).thenReturn(cacheProperties);
-    when(cacheProperties.getTimeout()).thenReturn(TIMEOUT);
-    when(cacheProperties.getTimeoutUnit()).thenReturn(TIMEOUT_UNIT);
-  }
-
-  @After
-  public void tearDown() throws Exception {
-    verifyNoMoreInteractions(commandProperties, stringRedisTemplate, valueOperations, cacheProperties);
-  }
-
-  private void setUpStringRedisTemplateValueOperation() {
-    when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+    when(cacheProperties.getTimeoutDuration()).thenReturn(DURATION);
   }
 
   @Test
   public void testGet() {
-    mockValueOperationGet();
-    String response = commandCache.get(KEY);
-    assertEquals(VALUE, response);
+    when(valueOperations.get(KEY)).thenReturn(Mono.just(VALUE));
 
-    verify(stringRedisTemplate, times(1)).opsForValue();
-    verify(valueOperations, times(1)).get(KEY);
-  }
+    String result = commandCache.get(KEY).block();
 
-  private void mockValueOperationGet() {
-    when(valueOperations.get(KEY)).thenReturn(VALUE);
+    assertEquals(VALUE, result);
+
+    verify(reactiveStringRedisTemplate).opsForValue();
+    verify(valueOperations).get(KEY);
   }
 
   @Test
   public void testCache() {
-    commandCache.cache(KEY, VALUE);
+    when(valueOperations.set(KEY, VALUE, DURATION))
+      .thenReturn(Mono.just(true));
 
-    verify(stringRedisTemplate, times(1)).opsForValue();
-    verify(valueOperations, times(1)).set(KEY, VALUE, TIMEOUT, TIMEOUT_UNIT);
-    verify(commandProperties, times(2)).getCache();
-    verify(cacheProperties, times(1)).getTimeout();
-    verify(cacheProperties, times(1)).getTimeoutUnit();
+    Boolean result = commandCache.cache(KEY, VALUE).block();
+
+    assertTrue(result);
+
+    verify(reactiveStringRedisTemplate).opsForValue();
+    verify(valueOperations).set(KEY, VALUE, DURATION);
   }
 
   @Test
   public void testEvict() {
-    commandCache.evict(KEY);
+    when(reactiveStringRedisTemplate.delete(any(Publisher.class))).thenReturn(Mono.just(1L));
 
-    verify(stringRedisTemplate, times(1)).delete(KEY);
+    Long result = commandCache.evict(KEY).block();
+
+    assertEquals(Long.valueOf(1L), result);
+
+    verify(reactiveStringRedisTemplate).delete(any(Publisher.class));
+  }
+
+  @After
+  public void tearDown() throws Exception {
+    verifyNoMoreInteractions(reactiveStringRedisTemplate, valueOperations);
   }
 }

@@ -6,7 +6,9 @@ import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.ApplicationContext;
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate;
 import org.springframework.test.context.junit4.SpringRunner;
 
 import static org.junit.Assert.*;
@@ -20,6 +22,9 @@ public class CommandAutoConfigurationTest {
 
   @Autowired
   private ApplicationContext applicationContext;
+
+  @MockBean
+  private ReactiveStringRedisTemplate reactiveStringRedisTemplate;
 
   @Test
   public void testCommandExecutorMustExists() throws Exception {

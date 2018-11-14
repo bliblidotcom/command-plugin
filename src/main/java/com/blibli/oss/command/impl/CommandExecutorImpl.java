@@ -1,20 +1,20 @@
 package com.blibli.oss.command.impl;
 
 import com.blibli.oss.command.Command;
-import com.blibli.oss.command.CommandBuilder;
 import com.blibli.oss.command.CommandExecutor;
-import com.blibli.oss.command.CommandProcessor;
 import com.blibli.oss.command.exception.CommandValidationException;
 import com.blibli.oss.command.helper.ErrorHelper;
-import com.blibli.oss.command.tuple.*;
+import com.blibli.oss.command.plugin.CommandInterceptor;
+import com.blibli.oss.command.plugin.InterceptorUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
-import rx.Single;
+import reactor.core.publisher.Mono;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.Validator;
+import java.util.Collection;
 import java.util.Set;
 
 /**
@@ -25,155 +25,43 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
 
   private Validator validator;
 
-  private CommandProcessor commandProcessor;
-
   private ApplicationContext applicationContext;
 
-  public CommandExecutorImpl(Validator validator, CommandProcessor commandProcessor) {
+  private Collection<CommandInterceptor> commandInterceptors;
+
+  public CommandExecutorImpl(Validator validator) {
     this.validator = validator;
-    this.commandProcessor = commandProcessor;
   }
 
   @Override
   public void setApplicationContext(ApplicationContext applicationContext) throws BeansException {
     this.applicationContext = applicationContext;
+    commandInterceptors = InterceptorUtil.getCommandInterceptors(applicationContext);
   }
 
   @Override
-  public <R, T> CommandBuilder<R, T> build(Class<? extends Command<R, T>> commandClass, R request) {
-    return new CommandBuilderImpl<>(request, commandClass);
-  }
-
-  @Override
-  public <R, T> Single<T> execute(Class<? extends Command<R, T>> commandClass, R request) {
+  public <R, T> Mono<T> execute(Class<? extends Command<R, T>> commandClass, R request) {
     return validateRequest(request, commandClass)
-        .flatMap(validRequest -> doExecute(commandClass, validRequest));
+      .flatMap(validRequest -> doExecute(commandClass, validRequest));
   }
 
-  @Override
-  public <R1, T1, R2, T2> Single<Tuple2<T1, T2>> executeAll(
-      CommandBuilder<R1, T1> commandBuilder1,
-      CommandBuilder<R2, T2> commandBuilder2
-  ) {
-    return Single.zip(
-        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
-        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
-        Tuple::of
-    ).flatMap(tuple ->
-        Single.zip(
-            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            Tuple2::new
-        )
-    );
-  }
-
-  @Override
-  public <R1, T1, R2, T2, R3, T3> Single<Tuple3<T1, T2, T3>> executeAll(
-      CommandBuilder<R1, T1> commandBuilder1,
-      CommandBuilder<R2, T2> commandBuilder2,
-      CommandBuilder<R3, T3> commandBuilder3
-  ) {
-    return Single.zip(
-        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
-        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
-        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
-        Tuple::of
-    ).flatMap(tuple ->
-        Single.zip(
-            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
-            Tuple3::new
-        )
-    );
-  }
-
-  @Override
-  public <R1, T1, R2, T2, R3, T3, R4, T4> Single<Tuple4<T1, T2, T3, T4>> executeAll(
-      CommandBuilder<R1, T1> commandBuilder1,
-      CommandBuilder<R2, T2> commandBuilder2,
-      CommandBuilder<R3, T3> commandBuilder3,
-      CommandBuilder<R4, T4> commandBuilder4
-  ) {
-    return Single.zip(
-        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
-        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
-        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
-        validateRequest(commandBuilder4.getRequest(), commandBuilder4.getCommandClass()),
-        Tuple::of
-    ).flatMap(tuple ->
-        Single.zip(
-            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
-            doExecute(commandBuilder4.getCommandClass(), tuple.getForth()),
-            Tuple4::new
-        )
-    );
-  }
-
-  @Override
-  public <R1, T1, R2, T2, R3, T3, R4, T4, R5, T5> Single<Tuple5<T1, T2, T3, T4, T5>> executeAll(
-      CommandBuilder<R1, T1> commandBuilder1,
-      CommandBuilder<R2, T2> commandBuilder2,
-      CommandBuilder<R3, T3> commandBuilder3,
-      CommandBuilder<R4, T4> commandBuilder4,
-      CommandBuilder<R5, T5> commandBuilder5
-  ) {
-    return Single.zip(
-        validateRequest(commandBuilder1.getRequest(), commandBuilder1.getCommandClass()),
-        validateRequest(commandBuilder2.getRequest(), commandBuilder2.getCommandClass()),
-        validateRequest(commandBuilder3.getRequest(), commandBuilder3.getCommandClass()),
-        validateRequest(commandBuilder4.getRequest(), commandBuilder4.getCommandClass()),
-        validateRequest(commandBuilder5.getRequest(), commandBuilder5.getCommandClass()),
-        Tuple::of
-    ).flatMap(tuple ->
-        Single.zip(
-            doExecute(commandBuilder1.getCommandClass(), tuple.getFirst()),
-            doExecute(commandBuilder2.getCommandClass(), tuple.getSecond()),
-            doExecute(commandBuilder3.getCommandClass(), tuple.getThird()),
-            doExecute(commandBuilder4.getCommandClass(), tuple.getForth()),
-            doExecute(commandBuilder5.getCommandClass(), tuple.getFifth()),
-            Tuple5::new
-        )
-    );
-  }
-
-  @SafeVarargs
-  private final <R> Single<R> validateRequest(R request, Class<? extends Command<?, ?>>... classes) {
-    return Single.create(singleSubscriber -> {
-      try {
-        if (isValidateRequest(classes)) {
-          log.info("Validate request {}", request.getClass().getName());
-          validateAndThrownIfInvalid(request);
-        }
-
-        singleSubscriber.onSuccess(request);
-      } catch (Throwable throwable) {
-        singleSubscriber.onError(throwable);
+  private <R> Mono<R> validateRequest(R request, Class<? extends Command<?, ?>> clazz) {
+    return Mono.fromCallable(() -> {
+      if (isValidateRequest(clazz)) {
+        log.info("Validate request {}", request.getClass().getName());
+        validateAndThrownIfInvalid(request);
       }
+      return request;
     });
   }
 
-  @SafeVarargs
-  private final boolean isValidateRequest(Class<? extends Command<?, ?>>... classes) {
-    if (classes == null) {
-      return false;
-    }
-
-    for (Class<? extends Command> clazz : classes) {
-      Command command = applicationContext.getBean(clazz);
-      if (command.validateRequest()) {
-        return true;
-      }
-    }
-
-    return false;
+  private boolean isValidateRequest(Class<? extends Command<?, ?>> clazz) {
+    Command<?, ?> bean = applicationContext.getBean(clazz);
+    return bean.validateRequest();
   }
 
   private <R> void validateAndThrownIfInvalid(R request)
-      throws CommandValidationException {
+    throws CommandValidationException {
     Set<ConstraintViolation<R>> constraintViolations = validator.validate(request);
     if (!constraintViolations.isEmpty()) {
       String validationMessage = ErrorHelper.from(constraintViolations).toString();
@@ -182,75 +70,17 @@ public class CommandExecutorImpl implements CommandExecutor, ApplicationContextA
     }
   }
 
-  private <R, T> Single<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
-    return commandProcessor.doExecute(commandClass, request);
+  private <R, T> Mono<T> doExecute(Class<? extends Command<R, T>> commandClass, R request) {
+    Command<R, T> command = applicationContext.getBean(commandClass);
+    return InterceptorUtil.beforeExecute(commandInterceptors, command, request)
+      .switchIfEmpty(doExecuteCommand(request, command));
   }
 
-  @Override
-  public <R, T1, T2> Single<Tuple2<T1, T2>> executeAll(
-      Class<? extends Command<R, T1>> command1,
-      Class<? extends Command<R, T2>> command2,
-      R request) {
-    return validateRequest(request, command1, command2).flatMap(validRequest ->
-        Single.zip(
-            doExecute(command1, request),
-            doExecute(command2, request),
-            Tuple::of
-        )
-    );
+  private <R, T> Mono<T> doExecuteCommand(R request, Command<R, T> command) {
+    return command.execute(request)
+      .doOnSuccess(response -> InterceptorUtil.afterSuccessExecute(commandInterceptors, command, request, response).subscribe())
+      .doOnError(throwable -> InterceptorUtil.afterFailedExecute(commandInterceptors, command, request, throwable).subscribe())
+      .onErrorResume(throwable -> command.fallback(throwable, request));
   }
 
-  @Override
-  public <R, T1, T2, T3> Single<Tuple3<T1, T2, T3>> executeAll(
-      Class<? extends Command<R, T1>> command1,
-      Class<? extends Command<R, T2>> command2,
-      Class<? extends Command<R, T3>> command3,
-      R request) {
-    return validateRequest(request, command1, command2, command3).flatMap(validRequest ->
-        Single.zip(
-            doExecute(command1, request),
-            doExecute(command2, request),
-            doExecute(command3, request),
-            Tuple::of
-        )
-    );
-  }
-
-  @Override
-  public <R, T1, T2, T3, T4> Single<Tuple4<T1, T2, T3, T4>> executeAll(
-      Class<? extends Command<R, T1>> command1,
-      Class<? extends Command<R, T2>> command2,
-      Class<? extends Command<R, T3>> command3,
-      Class<? extends Command<R, T4>> command4,
-      R request) {
-    return validateRequest(request, command1, command2, command3, command4).flatMap(validRequest ->
-        Single.zip(
-            doExecute(command1, request),
-            doExecute(command2, request),
-            doExecute(command3, request),
-            doExecute(command4, request),
-            Tuple::of
-        )
-    );
-  }
-
-  @Override
-  public <R, T1, T2, T3, T4, T5> Single<Tuple5<T1, T2, T3, T4, T5>> executeAll(
-      Class<? extends Command<R, T1>> command1,
-      Class<? extends Command<R, T2>> command2,
-      Class<? extends Command<R, T3>> command3,
-      Class<? extends Command<R, T4>> command4,
-      Class<? extends Command<R, T5>> command5,
-      R request) {
-    return validateRequest(request, command1, command2, command3, command4, command5).flatMap(validRequest ->
-        Single.zip(
-            doExecute(command1, request),
-            doExecute(command2, request),
-            doExecute(command3, request),
-            doExecute(command4, request),
-            doExecute(command5, request),
-            Tuple::of
-        )
-    );
-  }
 }

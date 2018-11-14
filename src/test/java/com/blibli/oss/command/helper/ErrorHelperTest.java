@@ -20,10 +20,13 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.validator.constraints.NotBlank;
+import org.junit.Before;
 import org.junit.Test;
+import org.springframework.boot.validation.MessageInterpolatorFactory;
+import org.springframework.validation.beanvalidation.LocalValidatorFactoryBean;
 
 import javax.validation.*;
+import javax.validation.constraints.NotBlank;
 
 import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
@@ -43,7 +46,16 @@ import static org.mockito.Mockito.*;
  */
 public class ErrorHelperTest {
 
-  private Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+  private Validator validator;
+
+  @Before
+  public void setUp() throws Exception {
+    LocalValidatorFactoryBean factoryBean = new LocalValidatorFactoryBean();
+    MessageInterpolatorFactory interpolatorFactory = new MessageInterpolatorFactory();
+    factoryBean.setMessageInterpolator(interpolatorFactory.getObject());
+    factoryBean.afterPropertiesSet();
+    validator = factoryBean.getValidator();
+  }
 
   @Test
   public void testInvalid() {

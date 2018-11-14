@@ -2,6 +2,7 @@ package com.blibli.oss.command.plugin;
 
 import com.blibli.oss.command.Command;
 import org.springframework.core.Ordered;
+import reactor.core.publisher.Mono;
 
 /**
  * @author Eko Kurniawan Khannedy
@@ -20,8 +21,8 @@ public interface CommandInterceptor extends Ordered {
    * @param <T>     response type
    * @return response or null
    */
-  default <R, T> T beforeExecute(Command<R, T> command, R request) {
-    return null;
+  default <R, T> Mono<T> beforeExecute(Command<R, T> command, R request) {
+    return Mono.empty();
   }
 
   /**
@@ -33,8 +34,8 @@ public interface CommandInterceptor extends Ordered {
    * @param <R>      request type
    * @param <T>      response type
    */
-  default <R, T> void afterSuccessExecute(Command<R, T> command, R request, T response) {
-    // DO NOTHING
+  default <R, T> Mono<Void> afterSuccessExecute(Command<R, T> command, R request, T response) {
+    return Mono.empty();
   }
 
   /**
@@ -46,8 +47,8 @@ public interface CommandInterceptor extends Ordered {
    * @param <R>       request type
    * @param <T>       response type
    */
-  default <R, T> void afterFailedExecute(Command<R, T> command, R request, Throwable throwable) {
-    // DO NOTHING
+  default <R, T> Mono<Void> afterFailedExecute(Command<R, T> command, R request, Throwable throwable) {
+    return Mono.empty();
   }
 
   /**

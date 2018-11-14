@@ -1,14 +1,16 @@
 package com.blibli.oss.command.cache;
 
+import reactor.core.publisher.Mono;
+
 /**
  * @author Eko Kurniawan Khannedy
  */
 public interface CommandCache {
 
-  String get(String key);
+  Mono<String> get(String key);
 
-  void cache(String key, String value);
+  Mono<Boolean> cache(String key, String value);
 
-  void evict(String key);
+  Mono<Long> evict(String... keys);
 
 }
