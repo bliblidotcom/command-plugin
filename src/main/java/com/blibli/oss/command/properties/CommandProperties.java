@@ -1,6 +1,9 @@
 package com.blibli.oss.command.properties;
 
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 import java.time.Duration;
@@ -11,6 +14,9 @@ import java.time.temporal.ChronoUnit;
  * @since 31/01/18
  */
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 @ConfigurationProperties("command")
 public class CommandProperties {
 

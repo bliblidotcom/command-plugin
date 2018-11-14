@@ -1,6 +1,7 @@
 package com.blibli.oss.command.autoconfigure;
 
 import com.blibli.oss.command.properties.CommandProperties;
+import com.blibli.oss.command.properties.SchedulerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -9,7 +10,8 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableConfigurationProperties({
-    CommandProperties.class
+  CommandProperties.class,
+  SchedulerProperties.class
 })
 public class CommandPropertiesAutoConfiguration {
 
