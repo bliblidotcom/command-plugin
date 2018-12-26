@@ -1,12 +1,63 @@
 version: 2.1
+
 orbs:
   maven: circleci/maven@0.0.4
 executors:
   my-executor:
     docker:
     - image: 'circleci/openjdk:8u171'
+
+jobs:
+  static-analysis:
+    docker:
+    - image: 'circleci/openjdk:8u171'
+    steps:
+    - checkout
+    - run:
+        name: Get Pull Request ID
+        # Add `-u $GITHUB_ACCESS_TOKEN:x-oauth-basic` if private repo
+        command: |
+          if [[ -z "$CIRCLE_PR_NUMBER" ]]; then
+              if [[ -z "$CI_PULL_REQUEST" ]]; then
+                  URL="https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH"
+                  RESULT="`curl -X GET $URL | jq ".[0].url"`"
+                  [[ "$RESULT" == 'null' ]] && CI_PULL_REQUEST='' || CI_PULL_REQUEST="${RESULT//\"}"
+              fi
+              CIRCLE_PR_NUMBER="$(basename "$CI_PULL_REQUEST")"
+          fi
+          echo "export CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER" >> $BASH_ENV
+    - run:
+        # TODO cache this
+        # TODO move sonar-scanner version to variable
+        name: Install sonar-scanner
+        command: |
+          sudo apt-get install unzip
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-3.2.0.1227-linux.zip
+          unzip sonar-scanner-cli-3.2.0.1227-linux.zip
+    - maven/with_cache:
+        steps:
+        - run: mvn clean install -Dmaven.test.skip=true
+    - run:
+        name: Run sonar-scanner
+        command: |
+          echo 'export PATH=$PATH:~/project/sonar-scanner-3.2.0.1227-linux/bin' >> $BASH_ENV
+          source $BASH_ENV
+          sonar-scanner \
+            -Dsonar.projectKey=blibli-future_command-plugin \
+            -Dsonar.organization=blibli-future \
+            -Dsonar.login=${SONARCLOUD_TOKEN} \
+            -Dsonar.host.url=https://sonarcloud.io \
+            -Dsonar.sources=./ \
+            -Dsonar.pullrequest.branch=${CIRCLE_BRANCH} \
+            -Dsonar.pullrequest.key=${CIRCLE_PR_NUMBER} \
+            -Dsonar.pullrequest.base=master \
+            -Dsonar.pullrequest.provider=github \
+            -Dsonar.pullrequest.github.repository=${CIRCLE_PR_REPONAME} \
+
 workflows:
-  maven_test:
+  pull_request_check:
     jobs:
     - maven/test:
         executor: my-executor
+    - static-analysis:
+        context: DEVELOPMENT
