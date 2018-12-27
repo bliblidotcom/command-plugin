@@ -37,26 +37,27 @@ jobs:
     - maven/with_cache:
         steps:
         - run: mvn clean install -Dmaven.test.skip=true
-    - run:
-        name: Run sonar-scanner
-        command: |
-          echo 'export PATH=$PATH:~/project/sonar-scanner-3.2.0.1227-linux/bin' >> $BASH_ENV
-          source $BASH_ENV
-          sonar-scanner \
-            -Dsonar.projectKey=blibli-future_command-plugin \
-            -Dsonar.organization=blibli-future \
-            -Dsonar.login=${SONARCLOUD_TOKEN} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.sources=./ \
-            -Dsonar.pullrequest.branch=${CIRCLE_BRANCH} \
-            -Dsonar.pullrequest.key=${CIRCLE_PR_NUMBER} \
-            -Dsonar.pullrequest.base=master \
-            -Dsonar.pullrequest.provider=github \
-            -Dsonar.pullrequest.github.repository=${CIRCLE_PR_REPONAME} \
+        - run:
+            # TODO cache sonar plugin separately
+            name: Run sonar-scanner
+            command: |
+              echo 'export PATH=$PATH:~/project/sonar-scanner-3.2.0.1227-linux/bin' >> $BASH_ENV
+              source $BASH_ENV
+              mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.5.0.1254:sonar \
+                -Dsonar.projectKey=blibli-future_command-plugin \
+                -Dsonar.organization=blibli-future \
+                -Dsonar.login=${SONARCLOUD_TOKEN} \
+                -Dsonar.host.url=https://sonarcloud.io \
+                -Dsonar.pullrequest.branch=${CIRCLE_BRANCH} \
+                -Dsonar.pullrequest.key=${CIRCLE_PR_NUMBER} \
+                -Dsonar.pullrequest.base=master \
+                -Dsonar.pullrequest.provider=github \
+                -Dsonar.pullrequest.github.repository=${CIRCLE_PR_REPONAME} \
 
 workflows:
   pull_request_check:
     jobs:
+    # TODO download mvn dependency first, and make all jobs depend upon it.
     - maven/test:
         executor: my-executor
     - static-analysis:
