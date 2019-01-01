@@ -7,33 +7,48 @@ executors:
     docker:
     - image: 'circleci/openjdk:8u171'
 
+commands:
+  prepare-env:
+    description: "Prepare environment variables"
+    steps:
+    - run:
+        name: Install hub CLI client
+        environment:
+          HUB_VERSION: 2.7.0
+          HUB_FOLDER: hub-linux-amd64-2.7.0
+        command: |
+          wget https://github.com/github/hub/releases/download/v${HUB_VERSION}/${HUB_FOLDER}.tgz
+          tar -xzf ${HUB_FOLDER}.tgz
+          echo "export PATH=$PATH:~/${HUB_FOLDER}/bin" >> $BASH_ENV
+          echo "alias git=hub" >> $BASH_ENV
+    - run:
+        name: Get Pull Request ID
+        # Add `-u $GITHUB_ACCESS_TOKEN:x-oauth-basic` if private repo
+        # get PR number from GITHUB hub: git pr list --format=%I --head=feature/circle-ci
+        command: |
+          if [[ -z "$CIRCLE_PR_NUMBER" ]]; then
+              if [[ -z "$CIRCLE_PULL_REQUEST" ]]; then
+                  URL="https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH"
+                  RESULT="`curl -X GET $URL | jq ".[0].url"`"
+                  [[ "$RESULT" == 'null' ]] && CIRCLE_PULL_REQUEST='' || CIRCLE_PULL_REQUEST="${RESULT//\"}"
+              fi
+              CIRCLE_PR_NUMBER="$(basename "$CIRCLE_PULL_REQUEST")"
+          fi
+          echo "export CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER" >> $BASH_ENV
+    - run:
+        name: Get pull request base branch
+        command:
+          PR_BRANCH_TARGET="`git pr list --format=%B --head=${CIRCLE_BRANCH}`"
+          echo "export PR_BRANCH_TARGET=$PR_BRANCH_TARGET" >> $BASH_ENV
+
+
 jobs:
   static-analysis-pr:
     docker:
     - image: 'circleci/openjdk:8u171'
     steps:
     - checkout
-    - run:
-        name: Get Pull Request ID
-        # Add `-u $GITHUB_ACCESS_TOKEN:x-oauth-basic` if private repo
-        command: |
-          if [[ -z "$CIRCLE_PR_NUMBER" ]]; then
-              if [[ -z "$CI_PULL_REQUEST" ]]; then
-                  URL="https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH"
-                  RESULT="`curl -X GET $URL | jq ".[0].url"`"
-                  [[ "$RESULT" == 'null' ]] && CI_PULL_REQUEST='' || CI_PULL_REQUEST="${RESULT//\"}"
-              fi
-              CIRCLE_PR_NUMBER="$(basename "$CI_PULL_REQUEST")"
-          fi
-          echo "export CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER" >> $BASH_ENV
-    - run:
-        # TODO cache this
-        # TODO move sonar-scanner version to variable
-        name: Install sonar-scanner
-        command: |
-          sudo apt-get install unzip
-          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-3.2.0.1227-linux.zip
-          unzip sonar-scanner-cli-3.2.0.1227-linux.zip
+    - prepare-env
     - maven/with_cache:
         steps:
         - run: mvn clean install -Dmaven.test.skip=true
@@ -59,46 +74,21 @@ jobs:
     - image: 'circleci/openjdk:8u171'
     steps:
     - checkout
-    - run:
-        name: Install hub CLI client
-        environment:
-          HUB_VERSION: 2.7.0
-          HUB_FOLDER: hub-linux-amd64-2.7.0
-        command: |
-          wget https://github.com/github/hub/releases/download/${HUB_VERSION}/${HUB_FOLDER}.tgz
-          tar -xzfv ${HUB_FOLDER}.tgz
-          echo "export PATH=$PATH:~/${HUB_FOLDER}/bin" >> $BASH_ENV
-          echo "alias git=hub" >> $BASH_ENV
-    - run:
-        name: Get Pull Request ID
-        # Add `-u $GITHUB_ACCESS_TOKEN:x-oauth-basic` if private repo
-        # get PR number from GITHUB hub: git pr list --format=%I --head=feature/circle-ci
-        command: |
-          if [[ -z "$CIRCLE_PR_NUMBER" ]]; then
-              if [[ -z "$CI_PULL_REQUEST" ]]; then
-                  URL="https://api.github.com/repos/$CIRCLE_PROJECT_USERNAME/$CIRCLE_PROJECT_REPONAME/pulls?head=$CIRCLE_PROJECT_USERNAME:$CIRCLE_BRANCH"
-                  RESULT="`curl -X GET $URL | jq ".[0].url"`"
-                  [[ "$RESULT" == 'null' ]] && CI_PULL_REQUEST='' || CI_PULL_REQUEST="${RESULT//\"}"
-              fi
-              CIRCLE_PR_NUMBER="$(basename "$CI_PULL_REQUEST")"
-          fi
-          echo "export CIRCLE_PR_NUMBER=$CIRCLE_PR_NUMBER" >> $BASH_ENV
-    - run:
-        name: Get pull request base branch
-        command:
-          PR_BRANCH_TARGET="`git pr list --format=%B --head=${CIRCLE_BRANCH}`"
-          echo "export PR_BRANCH_TARGET=$PR_BRANCH_TARGET" >> $BASH_ENV
-    - run:
-        name: Run sonar scanner
-        command: |
-          source $BASH_ENV
-          mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.5.0.1254:sonar \
-            -Dsonar.projectKey=blibli-future_command-plugin \
-            -Dsonar.organization=blibli-future \
-            -Dsonar.login=${SONARCLOUD_TOKEN} \
-            -Dsonar.host.url=https://sonarcloud.io \
-            -Dsonar.branch.name=${CIRCLE_BRANCH} \
-            -Dsonar.branch.target=${PR_BRANCH_TARGET}
+    - prepare-env
+    - maven/with_cache:
+        steps:
+        - run: mvn clean install
+        - run:
+            name: Run sonar scanner
+            command: |
+              source $BASH_ENV
+              mvn org.sonarsource.scanner.maven:sonar-maven-plugin:3.5.0.1254:sonar \
+                -Dsonar.projectKey=blibli-future_command-plugin \
+                -Dsonar.organization=blibli-future \
+                -Dsonar.login=${SONARCLOUD_TOKEN} \
+                -Dsonar.host.url=https://sonarcloud.io \
+                -Dsonar.branch.name=${CIRCLE_BRANCH} \
+                -Dsonar.branch.target=${PR_BRANCH_TARGET}
 
 
 workflows:
