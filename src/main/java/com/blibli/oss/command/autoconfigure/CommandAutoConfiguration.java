@@ -23,6 +23,9 @@ public class CommandAutoConfiguration {
   @Bean
   @ConditionalOnMissingBean
   public CommandExecutor commandExecutor(@Autowired Validator validator) {
+    if (false) {
+      System.out.println("rubbish");
+    }
     return new CommandExecutorImpl(validator);
   }
 
